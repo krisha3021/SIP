@@ -23,6 +23,7 @@ import type { ScenarioComparisonResult } from '../finance/scenarios';
 import { retirementInputSchema, type RetirementInput, type RetirementResult } from '../finance/retirement';
 import { allocationInputSchema, type AllocationInput, type AllocationResult } from '../finance/allocation';
 import { lifeStageInputSchema, type LifeStageInput, type LifeStageResult, type AssetRange } from '../finance/lifeStage';
+import { capitalGainsInputSchema, FUND_TYPE_EXPLANATIONS, type CapitalGainsInput, type CapitalGainsResult } from '../finance/tax/capitalGains';
 import type { Provenance } from '../data/provenance';
 import type { StepUp } from '../finance/sip';
 import type { ContributionTiming, RateConvention } from '../finance/types';
@@ -664,5 +665,55 @@ export function buildLifeStageReport(input: LifeStageInput, result: LifeStageRes
       ['Prerequisites flagged', result.prerequisites.length],
     ],
     tables,
+  };
+}
+
+// ── Capital gains ────────────────────────────────────────────────────────────
+
+export function buildCapitalGainsReport(input: CapitalGainsInput, result: CapitalGainsResult, ctx: ReportContext & { schemeName?: string }): Report {
+  const v = capitalGainsInputSchema.parse(input);
+  const pct = (x: number | null) => (x === null ? 'Not applicable' : x * 100);
+  return {
+    ...base(`Capital-gains estimate — FY ${result.fy}${ctx.schemeName ? ` — ${ctx.schemeName}` : ''}`, ctx, result.notice),
+    assumptions: [
+      ['Financial year', result.fy],
+      ['Fund type', v.fundType],
+      ['Fund type means', FUND_TYPE_EXPLANATIONS[v.fundType]],
+      ['Redemption date', v.redemption.date],
+      ['Units redeemed', v.redemption.units],
+      ['Redemption NAV (₹)', v.redemption.navPerUnit],
+      ['Marginal slab rate (%)', v.marginalSlabRatePct ?? 'Not entered'],
+      ['s.112A gains already realised this year (₹)', v.other112ALtcgAlreadyRealised],
+    ],
+    conventions: [
+      ['Lot matching', 'First in, first out (FIFO), as registrars apply it'],
+      ['Holding period', '"More than N months": the redemption date is after the same date N calendar months after purchase'],
+      ['Netting', 'Gains and losses are netted within each gain type for this redemption only; a net loss is taxed at zero'],
+      ['Verification', result.verification],
+      ...result.rules.flatMap((r) => r.sources.map((s, i): [string, string] => [`Rule ${r.id}${r.sources.length > 1 ? ` (${i + 1})` : ''}`, `${r.rule} Source: ${s.label}, ${s.url} (checked ${s.verifiedOn})`])),
+      ...result.exclusions.map((e, i): [string, string] => [`Not modelled ${i + 1}`, e]),
+    ],
+    summary: [
+      ['Sale value (₹)', result.totals.saleValue],
+      ['Cost used (₹)', result.totals.costBasis],
+      ['Gain (₹)', result.totals.gain],
+      ['s.112A exemption used (₹)', result.exemption112A.used],
+      ['Tax before cess (₹)', result.taxBeforeCess],
+      [`Cess at ${result.cessRate * 100}% (₹)`, result.cess],
+      ['Estimated total tax (₹)', result.totalTax],
+      ['Units left after this redemption', result.unitsRemaining],
+    ],
+    tables: [
+      {
+        name: 'Lots (FIFO)',
+        columns: [{ header: 'Lot' }, { header: 'Purchase date' }, { header: 'Units' }, { header: 'Days held' }, { header: 'Term' }, { header: 'Treatment' }, { header: 'Cost per unit used (₹)' }, { header: 'Grandfathered' }, { header: 'Cost (₹)', numFmt: '#,##0.00' }, { header: 'Sale value (₹)', numFmt: '#,##0.00' }, { header: 'Gain (₹)', numFmt: '#,##0.00' }],
+        rows: result.slices.map((x) => [x.lotIndex + 1, x.purchaseDate, x.unitsRedeemed, x.holdingDays, x.term, x.treatment, x.costPerUnitUsed, x.grandfathered ? 'Yes' : 'No', x.costBasis, x.saleValue, x.gain]),
+      },
+      {
+        name: 'Tax by component',
+        columns: [{ header: 'Component' }, { header: 'Net gain (₹)', numFmt: '#,##0.00' }, { header: 'Taxable (₹)', numFmt: '#,##0.00' }, { header: 'Rate (%)' }, { header: 'Tax (₹)', numFmt: '#,##0.00' }],
+        rows: result.byTreatment.map((b) => [b.label, b.netGain, b.taxableGain, pct(b.rate), b.tax]),
+      },
+    ],
   };
 }

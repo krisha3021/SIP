@@ -1,6 +1,6 @@
 # Shared Contract — Agent 1 (Website) ⇄ Agent 2 (Finance & Data)
 
-Contract version: **0.3.0** (additive, 2026-10-17; baseline 0.1.0 from Phase 1). The code lives in
+Contract version: **0.4.0** (additive, 2026-10-17; baseline 0.1.0 from Phase 1). The code lives in
 `src/contracts/index.ts` (safe for client and server) and `src/contracts/server.ts` (server-only: data services and
 automation; never import it from a client component).
 
@@ -36,6 +36,29 @@ real value: render the fields the engine returns.
   Agent 1 owns the manifests and migrations.
 
 ## Changelog
+### 0.4.0 — 2026-10-17 (Agent 2, additive; branch `agent-2/capital-gains`)
+- Adds a capital-gains estimate for mutual-fund redemptions to `@/contracts`. It is separate from income tax.
+  - `estimateCapitalGains(input)` and `capitalGainsInputSchema`.
+    - Per-lot FIFO slices, each with its holding period, term and treatment.
+    - Treatments: s.111A, s.112A, s.50AA at slab, other STCG at slab, and s.112.
+    - Net gain, taxable amount, rate and tax per treatment.
+    - The s.112A exemption used, cess, and total tax.
+    - Every rule applied, each with its source URL and verification date.
+    - The list of exclusions.
+  - `CAPITAL_GAINS_NOTICE`. **The UI must display it** with every result.
+  - Fund-type selector content: `FUND_TYPES` and `FUND_TYPE_EXPLANATIONS`.
+  - The allowed marginal rates: `SLAB_RATES_PCT`.
+  - Rule configuration: `CAPITAL_GAINS_YEARS` and `SUPPORTED_CAPITAL_GAINS_YEARS`.
+  - Report payload: `buildCapitalGainsReport(input, result, ctx)`.
+  - Error handling:
+    - FY 2026-27 returns `UNVERIFIED_RULES`.
+    - Other financial years return `UNSUPPORTED`.
+    - Exchange-listed non-equity units return `UNVERIFIED_RULES`.
+    - Equity units bought before 1 Feb 2018 without the 31-Jan-2018 NAV return `INVALID_INPUT`.
+    - A slab-taxed gain without a slab rate returns `INVALID_INPUT` (field `marginalSlabRatePct`).
+- `IncomeTaxComparison.config` gains `cessRate` (decimal, e.g. `0.04`). This resolves Agent 1's request.
+- Months↔years mapping: resolved, see Open items.
+
 ### 0.3.0 — 2026-10-17 (Agent 2, additive; branch `agent-2/life-stage-planner`)
 - Adds the Life-stage & Risk Planner to `@/contracts`:
   - `planLifeStageRisk(input, config?)` and `lifeStageInputSchema`. The planner returns separate capacity and
@@ -130,9 +153,13 @@ Status notes in *italics* were added when the branches were merged (2026-10-17).
 - [ ] **Monte Carlo worker hooks.** The worker hosts `runMonteCarlo` unchanged; cancellation is by terminating the worker.
       Progress callbacks would let the UI show a progress bar for 10,000-path runs.
       *Provided in 0.2.0: `runMonteCarloChunked` / `createMonteCarloSession` with `onProgress` and `signal`.*
-- [ ] **Tax: expose `cessRate` on `IncomeTaxComparison.config`**, so the UI can label the cess line with the configured
+- [x] **Tax: expose `cessRate` on `IncomeTaxComparison.config`**, so the UI can label the cess line with the configured
       rate instead of a generic "Health & education cess".
-      *Still open in 0.2.0.*
-- [ ] **Months↔years in UI.** Calculators take whole years and pass `months = years × 12` to the engines (input unit
+      *Done in 0.4.0: `result.config.cessRate` (decimal; FY 2025-26 = 0.04).*
+- [x] **Months↔years in UI.** Calculators take whole years and pass `months = years × 12` to the engines (input unit
       mapping only). If Agent 2 prefers a `years` input on engines, say so.
-      *Still open: Agent 2 to answer.*
+      *Resolved (Agent 2, 0.4.0): `months = years × 12` is acceptable and exact. Every engine counts whole months, applies
+      step-ups and withdrawal increases at months 13, 25, …, and deflates by `months / 12` years, so whole years map
+      to whole months with no rounding. Keep the engines month-based so that a later "years and months" input needs no
+      contract change. No `years` input will be added. Only Monte Carlo (`years`) and retirement (ages) take years
+      natively.*
