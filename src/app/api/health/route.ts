@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { upstashConfigFromEnv } from '../_lib/storage';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +10,7 @@ export function GET() {
       status: 'ok',
       time: new Date().toISOString(),
       navProvider: process.env.NAV_PROVIDER === 'none' ? 'disabled' : 'mfapi',
-      sharedCacheConfigured: Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN),
+      sharedCacheConfigured: upstashConfigFromEnv() !== null,
     },
     { headers: { 'Cache-Control': 'no-store' } },
   );
