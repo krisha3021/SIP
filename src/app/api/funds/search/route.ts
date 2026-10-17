@@ -1,4 +1,4 @@
-import { PROVIDER_NAME } from '@/lib/data/mfapi';
+import { PROVIDER_NAME } from '@/contracts/server';
 import { guardFundsRequest } from '../../_lib/guard';
 import { search, searchQuerySchema } from '../../_lib/navService';
 import { errorJson, json } from '../../_lib/server';

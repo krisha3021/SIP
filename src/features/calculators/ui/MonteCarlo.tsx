@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Play, Shuffle, Square } from 'lucide-react';
-import { MAX_SIMULATIONS, runMonteCarlo, type CalcResult, type ContributionTiming, type MonteCarloInput, type MonteCarloResult, type PercentileBand } from '@/contracts';
+import { buildMonteCarloReport, MAX_SIMULATIONS, runMonteCarloChunked, type CalcResult, type ContributionTiming, type MonteCarloInput, type MonteCarloResult, type PercentileBand } from '@/contracts';
 import { NumberField } from '@/components/ui/NumberField';
 import { Choice } from '@/components/ui/Choice';
 import { KpiCard, KpiGrid, Money } from '@/components/ui/Kpi';
@@ -15,7 +15,6 @@ import { TIMING_LABEL, TimingField } from '@/components/calculator/ConventionFie
 import { ExportButtons, SavePlanButton, ShareButton } from '@/components/calculator/ActionButtons';
 import { formatINR, formatPct } from '@/lib/format/inr';
 import { buildQuery, optionFromParams, useFields, type SearchParamsRecord } from './useFields';
-import { monteCarloReport } from './reports';
 import { formatCount, formatShare } from './format';
 
 const DEFAULTS = { m: 15000, c: 0, y: 20, r: 12, vol: 16, s: 5, g: 5000000, i: 6, n: 2000, seed: 20240601 } as const satisfies Record<string, number>;
@@ -32,9 +31,14 @@ const FIELD_MAP: Record<string, string> = {
   seed: 'seed',
 };
 
+type WorkerOut =
+  | { type: 'progress'; id: number; done: number; total: number }
+  | { type: 'result'; id: number; result: CalcResult<MonteCarloResult>; ms: number };
+
 type RunState =
   | { status: 'idle' }
-  | { status: 'running'; startedAt: number }
+  | { status: 'cancelled' }
+  | { status: 'running'; id: number; done: number; total: number }
   | { status: 'done'; result: CalcResult<MonteCarloResult>; ms: number; mode: 'worker' | 'main-thread'; input: MonteCarloInput };
 
 export function MonteCarlo({ params }: { params?: SearchParamsRecord }) {
@@ -67,41 +71,63 @@ export function MonteCarlo({ params }: { params?: SearchParamsRecord }) {
     [f.allParsed, v, timing, basis],
   );
 
+  const abortRef = useRef<AbortController | null>(null);
+
   const stopWorker = () => {
     workerRef.current?.terminate();
     workerRef.current = null;
   };
 
-  const start = useCallback(
-    (inp: MonteCarloInput) => {
-      const id = ++reqId.current;
-      stopWorker();
-      setRun({ status: 'running', startedAt: performance.now() });
-      if (typeof Worker === 'undefined') {
-        // Fallback: run on the main thread (no Worker support). Deferred so the "Running" state renders first.
-        setTimeout(() => {
-          const t0 = performance.now();
-          const result = runMonteCarlo(inp);
-          if (id === reqId.current) setRun({ status: 'done', result, ms: performance.now() - t0, mode: 'main-thread', input: inp });
-        }, 0);
-        return;
-      }
+  const start = useCallback((inp: MonteCarloInput) => {
+    const id = ++reqId.current;
+    abortRef.current?.abort();
+    setRun({ status: 'running', done: 0, total: inp.simulations ?? 0, id });
+    const onProgress = (done: number, total: number) => {
+      if (id === reqId.current) setRun((prev) => (prev.status === 'running' && prev.id === id ? { ...prev, done, total } : prev));
+    };
+    const finish = (result: CalcResult<MonteCarloResult>, ms: number, mode: 'worker' | 'main-thread') => {
+      if (id !== reqId.current) return;
+      setRun(result.ok || result.error.code !== 'CANCELLED' ? { status: 'done', result, ms, mode, input: inp } : { status: 'cancelled' });
+    };
+
+    if (typeof Worker === 'undefined') {
+      // Fallback without Worker support: the same chunked engine on the main thread, yielding between chunks.
+      const ctrl = new AbortController();
+      abortRef.current = ctrl;
+      const t0 = performance.now();
+      void runMonteCarloChunked(inp, { signal: ctrl.signal, onProgress }).then((r) => finish(r, performance.now() - t0, 'main-thread'));
+      return;
+    }
+    if (!workerRef.current) {
       const w = new Worker(new URL('./mc.worker.ts', import.meta.url), { type: 'module' });
-      workerRef.current = w;
-      w.onmessage = (e: MessageEvent<{ id: number; result: CalcResult<MonteCarloResult>; ms: number }>) => {
-        if (e.data.id !== reqId.current) return;
-        setRun({ status: 'done', result: e.data.result, ms: e.data.ms, mode: 'worker', input: inp });
-        stopWorker();
+      w.onmessage = (e: MessageEvent<WorkerOut>) => {
+        const m = e.data;
+        if (m.type === 'progress') onProgressRef.current(m.id, m.done, m.total);
+        else finishRef.current(m.id, m.result, m.ms);
       };
       w.onerror = () => {
-        if (id !== reqId.current) return;
-        setRun({ status: 'done', result: { ok: false, error: { code: 'UNSUPPORTED', message: 'The simulation could not run in this browser.' } }, ms: 0, mode: 'worker', input: inp });
+        finishRef.current(reqId.current, { ok: false, error: { code: 'UNSUPPORTED', message: 'The simulation could not run in this browser.' } }, 0);
         stopWorker();
       };
-      w.postMessage({ id, input: inp });
-    },
-    [],
-  );
+      workerRef.current = w;
+    }
+    handlers.current.set(id, { onProgress, finish: (r, ms) => finish(r, ms, 'worker') });
+    workerRef.current.postMessage({ type: 'run', id, input: inp });
+  }, []);
+
+  // Worker replies are routed to the handlers of the run they belong to.
+  const handlers = useRef(new Map<number, { onProgress: (d: number, t: number) => void; finish: (r: CalcResult<MonteCarloResult>, ms: number) => void }>());
+  const onProgressRef = useRef((id: number, d: number, t: number) => handlers.current.get(id)?.onProgress(d, t));
+  const finishRef = useRef((id: number, r: CalcResult<MonteCarloResult>, ms: number) => {
+    handlers.current.get(id)?.finish(r, ms);
+    handlers.current.delete(id);
+  });
+
+  const cancel = () => {
+    if (run.status !== 'running') return;
+    abortRef.current?.abort();
+    workerRef.current?.postMessage({ type: 'cancel', id: run.id });
+  };
 
   // Run once on mount with the initial assumptions; afterwards the user runs it explicitly.
   // Cleanup terminates the worker, and a remount (e.g. StrictMode) starts a fresh run.
@@ -112,6 +138,7 @@ export function MonteCarlo({ params }: { params?: SearchParamsRecord }) {
       // reqId is a request counter, not a DOM ref: bumping it here invalidates any in-flight reply.
       // eslint-disable-next-line react-hooks/exhaustive-deps
       reqId.current++;
+      abortRef.current?.abort();
       stopWorker();
     };
   }, [start]);
@@ -157,13 +184,7 @@ export function MonteCarlo({ params }: { params?: SearchParamsRecord }) {
           <Play aria-hidden="true" size={16} /> Run simulation
         </Button>
         {run.status === 'running' && (
-          <Button
-            onClick={() => {
-              reqId.current++;
-              stopWorker();
-              setRun({ status: 'idle' });
-            }}
-          >
+          <Button onClick={cancel}>
             <Square aria-hidden="true" size={16} /> Cancel
           </Button>
         )}
@@ -176,13 +197,14 @@ export function MonteCarlo({ params }: { params?: SearchParamsRecord }) {
     results = <CalcErrorState parseIssue />;
   } else if (run.status === 'idle') {
     results = <Notice tone="info" title="Ready">Press “Run simulation” to see the range of outcomes.</Notice>;
-  } else if (run.status === 'running') {
+  } else if (run.status === 'cancelled') {
     results = (
-      <div role="status" aria-live="polite" className="rounded-lg border border-line bg-surface p-6 text-center">
-        <p className="font-semibold">Running {formatCount(input.simulations ?? 0)} simulations…</p>
-        <p className="mt-1 text-sm text-muted">This runs in a background thread, so the page stays responsive.</p>
-      </div>
+      <Notice tone="info" title="Simulation cancelled" role="status">
+        No result is shown. Press “Run simulation” to start again.
+      </Notice>
     );
+  } else if (run.status === 'running') {
+    results = <McProgress done={run.done} total={run.total} />;
   } else if (!run.result.ok) {
     results = <CalcErrorState error={run.result.error} />;
   } else {
@@ -283,25 +305,7 @@ export function MonteCarlo({ params }: { params?: SearchParamsRecord }) {
               disabled={!(run.status === 'done' && run.result.ok)}
               buildReport={() => {
                 if (run.status !== 'done' || !run.result.ok) throw new Error('No result');
-                const i = run.input;
-                return monteCarloReport(
-                  [
-                    ['Monthly SIP (₹)', i.monthlyContribution],
-                    ['Initial amount (₹)', i.initialCorpus ?? 0],
-                    ['Annual step-up (%)', i.annualStepUpPct ?? 0],
-                    ['Years', i.years],
-                    ['Expected annual return (%)', i.expectedReturnPct],
-                    ['Volatility (%)', i.volatilityPct],
-                    ['Goal (₹)', i.goalAmount],
-                    ['Goal basis', i.goalInTodaysRupees ? "Today's rupees" : 'Future rupees'],
-                    ['Inflation (%)', i.inflationPct ?? null],
-                  ],
-                  [
-                    ['Contribution timing', TIMING_LABEL[i.timing ?? 'end']],
-                    ['Return model', 'Monthly lognormal, i.i.d., mean-calibrated'],
-                  ],
-                  run.result.value,
-                );
+                return buildMonteCarloReport(run.input, run.result.value, { generatedAt: new Date().toISOString(), warnings: run.result.warnings });
               }}
             />
           </>
@@ -315,6 +319,28 @@ export function MonteCarlo({ params }: { params?: SearchParamsRecord }) {
           <li>A seeded random generator makes every run reproducible: the same inputs and seed give the same numbers.</li>
         </ul>
       </MethodNote>
+    </div>
+  );
+}
+
+/** Accessible progress: a native <progress> plus a polite live region that speaks only at 25% steps. */
+function McProgress({ done, total }: { done: number; total: number }) {
+  const quarter = total > 0 ? Math.floor((done / total) * 4) : 0;
+  return (
+    <div className="space-y-2 rounded-lg border border-line bg-surface p-6" data-testid="mc-progress">
+      <label htmlFor="mc-progress-bar" className="block font-semibold">
+        Running {formatCount(total)} simulations…
+      </label>
+      <progress id="mc-progress-bar" max={total || 1} value={done} className="h-2 w-full accent-[var(--brand)]">
+        {formatCount(done)} of {formatCount(total)}
+      </progress>
+      <p className="num text-sm text-muted" aria-hidden="true">
+        {formatCount(done)} of {formatCount(total)} paths
+      </p>
+      <p role="status" aria-live="polite" className="sr-only">
+        {quarter === 0 ? 'Simulation started' : `${quarter * 25}% of paths simulated`}
+      </p>
+      <p className="text-sm text-muted">This runs in a background thread, so the page stays responsive. You can cancel at any time.</p>
     </div>
   );
 }

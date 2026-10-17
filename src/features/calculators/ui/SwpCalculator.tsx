@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { simulateSwp, type RateConvention, type SwpInput, type SwpRow } from '@/contracts';
+import { buildSwpReport, simulateSwp, type RateConvention, type SwpInput, type SwpRow } from '@/contracts';
 import { NumberField } from '@/components/ui/NumberField';
 import { Choice } from '@/components/ui/Choice';
 import { KpiCard, KpiGrid, Money } from '@/components/ui/Kpi';
@@ -14,7 +14,6 @@ import { CONVENTION_LABEL, RateConventionField } from '@/components/calculator/C
 import { ExportButtons, SavePlanButton, ShareButton } from '@/components/calculator/ActionButtons';
 import { formatINR, formatPct } from '@/lib/format/inr';
 import { buildQuery, optionFromParams, useFields, type SearchParamsRecord } from './useFields';
-import { swpReport } from './reports';
 import { monthLabel, shortMonthLabel } from './format';
 
 const DEFAULTS = { c: 10000000, w: 50000, r: 8, inc: 5, i: 6, h: 40 } as const satisfies Record<string, number>;
@@ -146,22 +145,8 @@ export function SwpCalculator({ params }: { params?: SearchParamsRecord }) {
               fileBase="swp"
               disabled={!result?.ok}
               buildReport={() => {
-                if (!result?.ok) throw new Error('No result');
-                return swpReport(
-                  [
-                    ['Starting corpus (₹)', v.c],
-                    ['Monthly withdrawal, first year (₹)', v.w],
-                    ['Yearly increase in withdrawal (%)', v.inc],
-                    ['Expected annual return (%)', v.r],
-                    ['Inflation (%)', v.i],
-                    ['Years simulated', v.h],
-                  ],
-                  [
-                    ['Order within month', ORDER_LABEL[order]],
-                    ['Rate convention', CONVENTION_LABEL[rc]],
-                  ],
-                  result.value,
-                );
+                if (!result?.ok || !input) throw new Error('No result');
+                return buildSwpReport(input, result.value, { generatedAt: new Date().toISOString(), warnings: result.warnings });
               }}
             />
           </>

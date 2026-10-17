@@ -31,9 +31,8 @@ export function ExportButtons({ buildReport, fileBase, disabled }: { buildReport
     setBusy(true);
     setStatus(`Preparing ${kind.toUpperCase()}…`);
     try {
-      // reportToCsv/reportToXlsx are not yet re-exported by @/contracts (open item in docs/CONTRACTS.md);
-      // they are Agent 2's export functions, loaded here on demand.
-      const { reportToCsv, reportToXlsx } = await import('@/lib/export/report');
+      // Loaded on demand; ExcelJS itself loads lazily inside reportToXlsx.
+      const { reportToCsv, reportToXlsx } = await import('@/contracts');
       const report = buildReport();
       if (kind === 'csv') {
         triggerDownload(new Blob([reportToCsv(report)], { type: 'text/csv;charset=utf-8' }), datedName(fileBase, 'csv'));

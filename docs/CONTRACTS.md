@@ -1,6 +1,6 @@
 # Shared Contract — Agent 1 (Website) ⇄ Agent 2 (Finance & Data)
 
-Contract version: **0.2.0** (additive, 2026-10-17; baseline 0.1.0 from Phase 1). The code lives in
+Contract version: **0.2.1** (re-exports only, 2026-10-17; baseline 0.1.0 from Phase 1). The code lives in
 `src/contracts/index.ts` (safe for client and server) and `src/contracts/server.ts` (server-only: data services and
 automation; never import it from a client component).
 
@@ -36,6 +36,18 @@ real value: render the fields the engine returns.
   Agent 1 owns the manifests and migrations.
 
 ## Changelog
+### 0.2.1 — 2026-10-17 (Agent 1, owner-approved; re-exports only, no logic change)
+- `@/contracts` re-exports `reportToCsv` and `reportToXlsx`, so exports import only from the contract.
+- `@/contracts/server` starts with `import 'server-only'` (package `server-only@0.0.1` added), so importing it from a
+  client component fails the build.
+- `@/contracts/server` re-exports `searchSchemes`, `searchQuerySchema`, `schemeCodeSchema` and `PROVIDER_NAME` from the
+  MFAPI adapter, so API routes no longer import `@/lib/data/*` directly.
+- `@/contracts` also re-exports `checkBacktestEligibility`, `backtestScheme`, `rollingReturnsForScheme` (and the
+  `SchemeMeta` / `SchemeNavHistory` types). `eligibility.ts` imports the adapter for types only, so this pulls no
+  server code into the browser; the historical screens use them on the history returned by `/api/funds/[code]/nav`.
+- Still open for Agent 2: expose `cessRate` on `IncomeTaxComparison.config`; confirm the UI's whole-years →
+  `months = years × 12` input mapping (or add a `years` input).
+
 ### 0.2.0 — 2026-10-17 (Agent 2, additive; branch `agent-2/finance-data`)
 - `CalcErrorCode` gains `'CANCELLED'`. `AutomationRunStatus` gains `'skipped-disabled'` (the kill switch was on).
   Consumers that `switch` exhaustively on these unions need one new case each.

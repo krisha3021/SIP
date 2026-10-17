@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
-import { projectAccumulation, type AccumulationInput, type AccumulationRow, type ContributionTiming, type RateConvention, type StepUp } from '@/contracts';
+import { buildAccumulationReport, projectAccumulation, type AccumulationInput, type AccumulationRow, type ContributionTiming, type RateConvention, type StepUp } from '@/contracts';
 import { NumberField, parseNumberInput } from '@/components/ui/NumberField';
 import { Choice } from '@/components/ui/Choice';
 import { Button } from '@/components/ui/primitives';
@@ -15,7 +15,6 @@ import { CONVENTION_LABEL, RateConventionField, TIMING_LABEL, TimingField } from
 import { ExportButtons, SavePlanButton, ShareButton } from '@/components/calculator/ActionButtons';
 import { formatINR, formatPct } from '@/lib/format/inr';
 import { buildQuery, optionFromParams, useFields, type SearchParamsRecord } from './useFields';
-import { accumulationReport } from './reports';
 import { monthLabel, shortMonthLabel } from './format';
 
 export type AccumulationVariant = 'sip' | 'step-up-sip' | 'lumpsum' | 'corpus-sip';
@@ -351,36 +350,8 @@ export function AccumulationCalculator({ variant, params }: { variant: Accumulat
               fileBase={variant}
               disabled={!result?.ok}
               buildReport={() => {
-                if (!result?.ok) throw new Error('No result');
-                return accumulationReport(
-                  TITLES[variant],
-                  [
-                    ...(hasCorpus ? ([['Initial amount (₹)', v.c ?? null]] as Array<[string, number | null]>) : []),
-                    ...(hasMonthly ? ([['Monthly contribution (₹)', v.m ?? null]] as Array<[string, number | null]>) : []),
-                    ...(variant === 'step-up-sip'
-                      ? ([
-                          ['Step-up mode', stepMode],
-                          ['Step-up per year', stepMode === 'percent' ? `${f.raw.s}%` : `₹${f.raw.sa}`],
-                          ['Monthly cap (₹)', v.cap ?? 'None'],
-                        ] as Array<[string, string | number]>)
-                      : []),
-                    ['Years', v.y ?? null],
-                    ['Expected annual return (%)', v.r ?? null],
-                    ['Inflation (%)', v.i ?? null],
-                    ...(variant === 'corpus-sip'
-                      ? ([
-                          ['Pauses (months)', pauses.map((p) => `${p.from}–${p.to}`).join(', ') || 'None'],
-                          ['Top-ups (month: ₹)', topUps.map((t) => `${t.month}: ${t.amount}`).join(', ') || 'None'],
-                        ] as Array<[string, string]>)
-                      : []),
-                  ],
-                  [
-                    ...(variant === 'lumpsum' ? [] : ([['Contribution timing', TIMING_LABEL[timing]]] as Array<[string, string]>)),
-                    ['Rate convention', CONVENTION_LABEL[rc]],
-                  ],
-                  result.value,
-                  result.warnings,
-                );
+                if (!result?.ok || !input) throw new Error('No result');
+                return buildAccumulationReport(input, result.value, { generatedAt: new Date().toISOString(), warnings: result.warnings });
               }}
             />
           </>

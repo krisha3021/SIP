@@ -1,82 +1,75 @@
 import 'server-only';
-import { applyFetchAttempt, navFreshness, type DatasetState, type FreshnessState, type Provenance } from '@/contracts';
-// The MFAPI adapter is Agent 2's server-side data module. It is not re-exported by @/contracts yet
-// (open item: route response envelopes / adapter exports). Only these route helpers import it.
-import { fetchNavHistory, searchSchemes, schemeCodeSchema, searchQuerySchema, UpstreamError, type SchemeNavHistory } from '@/lib/data/mfapi';
-import { TtlCache, fetchTimeoutMs, todayInIndia } from './server';
+import {
+  DATA_ERROR_HTTP_STATUS,
+  InMemoryCacheStore,
+  RequestDeduper,
+  createNavService,
+  schemeCodeSchema,
+  searchQuerySchema,
+  searchSchemes,
+  type DataError,
+  type NavServiceResult,
+} from '@/contracts/server';
+import { fetchTimeoutMs } from './server';
 
-const NAV_TTL_MS = 30 * 60 * 1000;
+/**
+ * Route-side wiring of Agent 2's NAV service (cache → de-duplication → last-known-good).
+ * One module-level instance per server instance; the in-memory store is lost on a cold start
+ * until a shared store is provisioned (owner decision).
+ */
+const navService = createNavService({
+  cache: new InMemoryCacheStore({ maxEntries: 200 }),
+  fetchOptions: { timeoutMs: fetchTimeoutMs(), retries: 1 },
+});
+
 const SEARCH_TTL_MS = 60 * 60 * 1000;
-
-const navCache = new TtlCache<SchemeNavHistory>(NAV_TTL_MS, 100);
-const searchCache = new TtlCache<Awaited<ReturnType<typeof searchSchemes>>>(SEARCH_TTL_MS, 300);
-
-export type NavOutcome =
-  | {
-      ok: true;
-      data: SchemeNavHistory;
-      provenance: Provenance;
-      freshness: FreshnessState;
-      lastError: string | null;
-      servedFrom: 'upstream' | 'cache' | 'last-known-good';
-    }
-  | { ok: false; status: number; code: string; message: string };
+const searchCache = new InMemoryCacheStore({ maxEntries: 300 });
+const searchDeduper = new RequestDeduper();
 
 export { schemeCodeSchema, searchQuerySchema };
 
-function upstreamStatus(e: UpstreamError): { status: number; code: string; message: string } {
-  switch (e.kind) {
-    case 'not-found':
-      return { status: 404, code: 'NOT_FOUND', message: 'The provider has no NAV data for this scheme code.' };
-    case 'timeout':
-      return { status: 504, code: 'UPSTREAM_TIMEOUT', message: 'The NAV provider did not respond in time. Please try again shortly.' };
-    case 'invalid-response':
-      return { status: 502, code: 'UPSTREAM_INVALID', message: 'The NAV provider returned data in an unexpected format.' };
-    default:
-      return { status: 502, code: 'UPSTREAM_ERROR', message: 'The NAV provider could not be reached.' };
-  }
+export type NavOutcome =
+  | { ok: true; result: NavServiceResult & { state: { data: NonNullable<NavServiceResult['state']['data']> } } }
+  | { ok: false; status: number; code: string; message: string };
+
+function failure(error: DataError | null): NavOutcome {
+  const e = error ?? { code: 'INTERNAL' as const, message: 'NAV data is not available.', retryable: false };
+  return { ok: false, status: DATA_ERROR_HTTP_STATUS[e.code], code: e.code, message: e.message };
 }
 
-export async function getNav(code: number): Promise<NavOutcome> {
-  const key = String(code);
-  const today = todayInIndia();
-  const cached = navCache.fresh(key);
-  if (cached) {
-    const state: DatasetState<unknown> = { data: cached.navs, provenance: cached.provenance, lastAttemptAt: cached.provenance.fetchedAt, lastError: null };
-    return { ok: true, data: cached, provenance: cached.provenance, freshness: navFreshness(state, today), lastError: null, servedFrom: 'cache' };
-  }
-
-  const prevEntry = navCache.peek(key);
-  const prev: DatasetState<SchemeNavHistory> = prevEntry
-    ? { data: prevEntry.value, provenance: prevEntry.value.provenance, lastAttemptAt: prevEntry.value.provenance.fetchedAt, lastError: null }
-    : { data: null, provenance: null, lastAttemptAt: null, lastError: null };
-
-  try {
-    const fresh = await navCache.dedupe(key, () => fetchNavHistory(key, { timeoutMs: fetchTimeoutMs(), retries: 1 }));
-    navCache.set(key, fresh);
-    const state = applyFetchAttempt(prev, { ok: true, at: new Date().toISOString(), data: fresh, provenance: fresh.provenance });
-    return { ok: true, data: fresh, provenance: fresh.provenance, freshness: navFreshness(state, today), lastError: null, servedFrom: 'upstream' };
-  } catch (e) {
-    const err = e instanceof UpstreamError ? e : new UpstreamError('Could not reach provider', 'network');
-    const state = applyFetchAttempt(prev, { ok: false, at: new Date().toISOString(), error: err.message });
-    if (state.data && state.provenance) {
-      // A failed fetch never advances freshness: we serve the last good copy with its original dates.
-      return { ok: true, data: state.data, provenance: state.provenance, freshness: navFreshness(state, today), lastError: state.lastError, servedFrom: 'last-known-good' };
-    }
-    return { ok: false, ...upstreamStatus(err) };
-  }
+/** Maps the service result: an error becomes an HTTP failure only when there is no data at all. */
+export async function getNav(code: string): Promise<NavOutcome> {
+  const r = await navService.getNavHistory(code);
+  if (!r.state.data || !r.state.provenance) return failure(r.error);
+  return { ok: true, result: r as Extract<NavOutcome, { ok: true }>['result'] };
 }
 
-export async function search(q: string) {
-  const key = q.toLowerCase();
-  const cached = searchCache.fresh(key);
-  if (cached) return { ok: true as const, results: cached };
+/** The response envelope consumed by src/features/funds/ui/api.ts. */
+export function navEnvelope(r: Extract<NavOutcome, { ok: true }>['result'], includeNavs: boolean) {
+  const d = r.state.data;
+  return {
+    ok: true as const,
+    meta: d.meta,
+    ...(includeNavs ? { navs: d.navs } : {}),
+    provenance: r.state.provenance,
+    freshness: r.freshness,
+    lastError: r.state.lastError,
+    servedFrom: r.source as 'cache' | 'upstream' | 'last-known-good',
+    droppedRows: d.droppedRows,
+  };
+}
+
+type SearchResults = Awaited<ReturnType<typeof searchSchemes>>;
+
+export async function search(q: string): Promise<{ ok: true; results: SearchResults } | { ok: false; status: number; code: string; message: string }> {
+  const key = `search:v1:${q.toLowerCase()}`;
+  const cached = await searchCache.get<SearchResults>(key);
+  if (cached) return { ok: true, results: cached.value };
   try {
-    const results = await searchCache.dedupe(key, () => searchSchemes(q, { timeoutMs: fetchTimeoutMs(), retries: 1 }));
-    searchCache.set(key, results);
-    return { ok: true as const, results };
-  } catch (e) {
-    const err = e instanceof UpstreamError ? e : new UpstreamError('Could not reach provider', 'network');
-    return { ok: false as const, ...upstreamStatus(err) };
+    const results = await searchDeduper.run(key, () => searchSchemes(q, { timeoutMs: fetchTimeoutMs(), retries: 1 }));
+    await searchCache.set(key, results, SEARCH_TTL_MS);
+    return { ok: true, results };
+  } catch {
+    return { ok: false, status: 502, code: 'UPSTREAM_UNAVAILABLE', message: 'The fund search provider could not be reached. Please try again shortly.' };
   }
 }

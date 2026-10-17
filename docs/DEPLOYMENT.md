@@ -27,10 +27,20 @@ All are optional; the calculators work with none. Never commit real values; `.en
 | `NAV_PROVIDER` | `mfapi` | `mfapi` or `none` | `mfapi` | `none` turns fund features off (routes return 503). |
 | `NAV_FETCH_TIMEOUT_MS` | `8000` | `8000` | `8000` | Clamped server-side to 2000–15000. |
 | `UPSTASH_REDIS_REST_URL` / `_TOKEN` | unset for now | unset | unset | Shared cache is a deferred owner decision (may be paid). |
-| `CRON_SECRET` | unset until Agent 2's automation ships | unset | unset | Secret; server-only. |
+| `CRON_SECRET` | 32+ random characters | unset (cron does not run on previews) | optional, 32+ chars to test locally | Secret; server-only. Without it, `/api/cron/validate-mf-data` returns 401 — it never runs open. |
+| `MF_VALIDATION_DISABLED` | `false` | `true` | `false` | Kill switch for the scheduled data-quality task (`true` → run reports `skipped-disabled`). |
 
 `VERCEL_ENV` is set by Vercel automatically. When it is not `production`, the root layout emits `noindex, nofollow` and
 `robots.txt` disallows everything, so preview URLs are not indexed.
+
+## 3a. Scheduled data-quality check (Vercel Cron)
+- `vercel.json` schedules `GET /api/cron/validate-mf-data` once a day at `30 2 * * *` UTC (08:00 IST, after AMCs
+  publish the previous evening's NAVs). Hobby plans allow one run per day; Vercel may run it any time within that hour.
+- Vercel Cron only runs on the Production deployment and sends `Authorization: Bearer $CRON_SECRET`.
+- The response is the `AutomationRunReport` JSON plus `persistence: { store: "in-memory", persisted: false }`.
+  **Runs are not persisted** until a storage backend is provisioned (owner approval needed if it is paid); results live
+  only in the warm server instance. Check outcomes in Vercel → Logs.
+- Manual test: `curl -H "Authorization: Bearer $CRON_SECRET" https://<domain>/api/cron/validate-mf-data`.
 
 ## 4. Domain and DNS (owner)
 1. Vercel → Project → Settings → Domains → add `example.in` and `www.example.in` (choose one as primary; redirect the other).
@@ -41,6 +51,7 @@ All are optional; the calculators work with none. Never commit real values; `.en
 Run on the Preview URL before merging, and on Production after:
 - `GET /api/health` → `{"status":"ok", ...}` with `Cache-Control: no-store`.
 - `GET /api/market-status` → `quoteProvider: null`.
+- `GET /api/cron/validate-mf-data` without the secret → `401`.
 - Response headers include `Content-Security-Policy`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
   `Referrer-Policy`, `Permissions-Policy`.
 - Preview HTML contains `<meta name="robots" content="noindex, nofollow">`; Production does not.

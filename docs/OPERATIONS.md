@@ -5,9 +5,10 @@
 |---|---|---|
 | Pages and calculators | Static/SSR on Vercel; calculations run in the browser | None server-side |
 | Monte Carlo | Browser Web Worker | None |
-| `/api/funds/*` | Vercel Functions (Node.js) | Per-instance in-memory cache (30 min NAV, 60 min search), in-flight de-duplication, last-known-good copy |
+| `/api/funds/*` | Vercel Functions (Node.js) | Agent 2's `createNavService` with a per-instance `InMemoryCacheStore` (6 h fresh, 60 s failure cooldown, de-duplication, last-known-good); 60 min search cache |
 | Rate limiting | Same functions | Per-instance fixed window: 60 requests/min per client IP across `/api/funds/*` |
 | Saved plans, theme | User's browser `localStorage` | Never sent to the server |
+| `/api/cron/validate-mf-data` | Vercel Cron, daily 02:30 UTC | In-memory `MfDataStore` — runs are **not persisted** until storage is provisioned |
 
 Per-instance state resets on cold start and is not shared between instances. That is acceptable at current scale; a shared
 store (owner decision, possibly paid) would make caching and rate limits global.
@@ -41,5 +42,5 @@ store (owner decision, possibly paid) would make caching and rate limits global.
 
 ## Deferred (not built)
 - Cloud accounts / sign-in (needs a real auth provider, owner approval).
-- Admin dashboard for Agent 2's data-quality automation (`AutomationRunReport`) — waits for the automation endpoints.
+- Admin dashboard for `AutomationRunReport` — needs persisted run history first.
 - Shared cache and run-history storage.

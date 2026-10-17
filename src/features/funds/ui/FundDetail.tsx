@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { rollingReturns } from '@/contracts';
+import { rollingReturnsForScheme } from '@/contracts';
 import { Choice } from '@/components/ui/Choice';
 import { KpiCard, KpiGrid } from '@/components/ui/Kpi';
 import { Notice, buttonClass } from '@/components/ui/primitives';
@@ -10,7 +10,7 @@ import { Tabs } from '@/components/ui/Tabs';
 import { DataTable } from '@/components/ui/DataTable';
 import { formatIndianNumber, formatPct } from '@/lib/format/inr';
 import { formatCount, formatShare } from '@/features/calculators/ui/format';
-import { fetchNav, type ApiFailure, type NavResponse } from './api';
+import { fetchNav, toHistory, type ApiFailure, type NavResponse } from './api';
 import { ProvenancePanel } from './ProvenancePanel';
 import { NavChart, RollingChart } from './NavChart';
 
@@ -112,7 +112,7 @@ export function FundDetail({ schemeCode }: { schemeCode: string }) {
           ]}
         />
       </section>
-      <RollingSection navs={d.navs} />
+      <RollingSection data={d} />
       <section aria-labelledby="na-heading" className="rounded-xl border border-line bg-surface p-4">
         <h2 id="na-heading" className="font-sans text-base font-semibold">
           Not available from our data source
@@ -134,9 +134,10 @@ export function FundDetail({ schemeCode }: { schemeCode: string }) {
   );
 }
 
-function RollingSection({ navs }: { navs: NavResponse['navs'] }) {
+function RollingSection({ data }: { data: NavResponse }) {
   const [w, setW] = useState<'1' | '3' | '5' | '10'>('3');
-  const result = useMemo(() => rollingReturns(navs, Number(w)), [navs, w]);
+  const history = useMemo(() => toHistory(data), [data]);
+  const result = useMemo(() => rollingReturnsForScheme(history, Number(w)), [history, w]);
   return (
     <section aria-labelledby="rolling-heading" className="space-y-3">
       <h2 id="rolling-heading" className="text-xl font-semibold">
@@ -157,7 +158,7 @@ function RollingSection({ navs }: { navs: NavResponse['navs'] }) {
         />
       </div>
       {!result.ok ? (
-        <Notice tone="info" title="Not enough history for this window">
+        <Notice tone={result.error.code === 'UNSUPPORTED' ? 'warning' : 'info'} title={result.error.code === 'UNSUPPORTED' ? 'Rolling returns are not available for this scheme' : 'Not enough history for this window'}>
           {result.error.message}
         </Notice>
       ) : (

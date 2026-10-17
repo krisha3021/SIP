@@ -3,9 +3,9 @@
  *
  * The UI, API routes, charts, and exports import financial types and engines ONLY through this module.
  * Changing anything exported here requires a documented change in docs/CONTRACTS.md, a notice to the
- * other agent, and updated tests on both sides. Version: 0.2.0 (additive, 2026-10-17; baseline 0.1.0).
+ * other agent, and updated tests on both sides. Version: 0.2.1 (re-exports only, 2026-10-17; baseline 0.1.0).
  */
-export const CONTRACT_VERSION = '0.2.0';
+export const CONTRACT_VERSION = '0.2.1';
 
 // ── Result envelope and conventions ──────────────────────────────────────────
 export type { CalcResult, CalcError, CalcErrorCode, ContributionTiming, RateConvention } from '@/lib/finance/types';
@@ -46,6 +46,10 @@ export { rollingReturns } from '@/lib/finance/rolling';
 export type { RollingResult, RollingWindow } from '@/lib/finance/rolling';
 export { compareBooster, boosterInputSchema } from '@/lib/finance/booster';
 export type { BoosterInput, BoosterResult, StrategyOutcome } from '@/lib/finance/booster';
+// 0.2.1: plan/option eligibility re-exported client-side (pure; type-only import of the adapter), so browser
+// screens that already hold a scheme's history refuse IDCW/unknown options exactly as the server does.
+export { checkBacktestEligibility, backtestScheme, rollingReturnsForScheme } from '@/lib/data/eligibility';
+export type { SchemeMeta, SchemeNavHistory } from '@/lib/data/mfapi';
 
 // ── Data provenance & freshness ──────────────────────────────────────────────
 export type { Provenance, DataClassification, FreshnessState, DatasetState, FetchAttempt } from '@/lib/data/provenance';
@@ -54,6 +58,8 @@ export { applyFetchAttempt, navFreshness } from '@/lib/data/provenance';
 // ── Canonical report payload (Agent 2 fills; Agent 1 renders/delivers) ───────
 export type { Report, ReportTable } from '@/lib/export/report';
 export { BRAND, ATTRIBUTION, DISCLAIMER } from '@/lib/export/report';
+// 0.2.1: file renderers re-exported so exports import only from '@/contracts' (no logic change).
+export { reportToCsv, reportToXlsx } from '@/lib/export/report';
 // 0.2.0: one builder per calculator; exports never recalculate in the UI.
 export {
   buildAccumulationReport,

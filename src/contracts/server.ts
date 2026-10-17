@@ -1,3 +1,4 @@
+import 'server-only';
 /**
  * Server-only part of the shared contract (added in 0.2.0). Import it from route handlers, server
  * components, cron routes and scripts, never from client components: it reaches the upstream NAV
@@ -7,6 +8,8 @@ export { CONTRACT_VERSION } from './index';
 
 // ── Data services ────────────────────────────────────────────────────────────
 export type { SchemeMeta, SchemeNavHistory } from '@/lib/data/mfapi';
+// 0.2.1: search and input validation re-exported so API routes never import '@/lib/data/*' directly.
+export { searchSchemes, searchQuerySchema, schemeCodeSchema, PROVIDER_NAME } from '@/lib/data/mfapi';
 export type { CacheStore, CacheEntry } from '@/lib/data/cache';
 export { InMemoryCacheStore } from '@/lib/data/cache';
 export { RequestDeduper } from '@/lib/data/dedupe';

@@ -1,7 +1,7 @@
 'use client';
 
 import { useId, useMemo, useState } from 'react';
-import { backtestSipOnNav, type BacktestRow, type NavBacktestInput } from '@/contracts';
+import { backtestScheme, buildNavBacktestReport, checkBacktestEligibility, type BacktestRow, type NavBacktestInput } from '@/contracts';
 import { NumberField } from '@/components/ui/NumberField';
 import { Choice } from '@/components/ui/Choice';
 import { KpiCard, KpiGrid, Money } from '@/components/ui/Kpi';
@@ -13,12 +13,11 @@ import { CalcErrorState, ConventionsLine, MethodNote, Warnings } from '@/compone
 import { ExportButtons } from '@/components/calculator/ActionButtons';
 import { formatINR, formatIndianNumber, formatPct } from '@/lib/format/inr';
 import { useFields } from '@/features/calculators/ui/useFields';
-import { backtestReport } from '@/features/calculators/ui/reports';
 import { formatCount, formatShare } from '@/features/calculators/ui/format';
 import { FundSearch } from '@/features/funds/ui/FundSearch';
 import { useNav } from '@/features/funds/ui/FundDetail';
 import { ProvenancePanel } from '@/features/funds/ui/ProvenancePanel';
-import type { NavResponse } from '@/features/funds/ui/api';
+import { toHistory, type NavResponse } from '@/features/funds/ui/api';
 
 export function HistoricalBacktest({ initialScheme }: { initialScheme: string | null }) {
   const [scheme, setScheme] = useState<string | null>(initialScheme);
@@ -50,6 +49,20 @@ function BacktestForScheme({ scheme, onChange }: { scheme: string; onChange: () 
         <Button onClick={onChange}>Choose another scheme</Button>
       </div>
     );
+  // IDCW and unknown options are refused by the engine with its own explanation (its plan warnings flow into the result).
+  const elig = checkBacktestEligibility(state.data.meta);
+  if (!elig.ok)
+    return (
+      <div className="space-y-3">
+        <h2 className="text-2xl font-semibold">{state.data.meta.schemeName}</h2>
+        <div role="alert">
+          <Notice tone="warning" title="A backtest is not available for this scheme">
+            {elig.error.message}
+          </Notice>
+        </div>
+        <Button onClick={onChange}>Choose another scheme</Button>
+      </div>
+    );
   return <BacktestScreen data={state.data} onChange={onChange} />;
 }
 
@@ -74,7 +87,8 @@ function BacktestScreen({ data, onChange }: { data: NavResponse; onChange: () =>
         : null,
     [f.allParsed, v, freq, start, end],
   );
-  const result = useMemo(() => (input ? backtestSipOnNav(data.navs, input) : null), [input, data.navs]);
+  const history = useMemo(() => toHistory(data), [data]);
+  const result = useMemo(() => (input ? backtestScheme(history, input) : null), [input, history]);
   const errField = result && !result.ok ? result.error.field : undefined;
   const err = (k: keyof typeof DEFAULTS) => f.parseErrors[k] ?? (errField && FIELD_MAP[errField] === k && result && !result.ok ? result.error.message : null);
   const dateErr = (k: 'startDate' | 'endDate') => (errField === k && result && !result.ok ? result.error.message : null);
@@ -168,23 +182,11 @@ function BacktestScreen({ data, onChange }: { data: NavResponse; onChange: () =>
                 disabled={!result?.ok}
                 buildReport={() => {
                   if (!result?.ok) throw new Error('No result');
-                  return backtestReport(
-                    data.meta.schemeName,
-                    [
-                      ['Scheme code', data.meta.schemeCode],
-                      ['SIP amount (₹)', v.amt],
-                      ['Frequency', freq],
-                      ['SIP day', v.day],
-                      ['Start date', start],
-                      ['End date', end],
-                      ['Annual step-up (%)', v.step],
-                      ['Lumpsum on start date (₹)', v.init],
-                      ['Maximum NAV lag (days)', v.lag],
-                      ['Transaction cost (%)', v.cost],
-                    ],
-                    result.value,
-                    data.provenance,
-                  );
+                  return buildNavBacktestReport(input!, result.value, data.provenance, {
+                    generatedAt: new Date().toISOString(),
+                    warnings: result.warnings,
+                    schemeName: data.meta.schemeName,
+                  });
                 }}
               />
               <Button onClick={() => window.print()}>Print</Button>

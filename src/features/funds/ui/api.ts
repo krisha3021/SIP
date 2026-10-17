@@ -1,5 +1,5 @@
 /** Typed client for Lakshya's own /api/funds routes. The browser never calls the provider directly. */
-import type { FreshnessState, NavPoint, Provenance } from '@/contracts';
+import type { FreshnessState, NavPoint, Provenance, SchemeNavHistory } from '@/contracts';
 
 export interface SchemeMetaDto {
   schemeCode: number;
@@ -80,4 +80,9 @@ export function formatTimestamp(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }).format(d) + ' IST';
+}
+
+/** The engine-side history shape, rebuilt from the route envelope (no data is altered). */
+export function toHistory(r: NavResponse): SchemeNavHistory {
+  return { meta: r.meta, navs: r.navs, provenance: r.provenance, droppedRows: r.droppedRows };
 }

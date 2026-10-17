@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { planGoal, projectAccumulation, type AccumulationRow, type ContributionTiming, type GoalInput, type RateConvention } from '@/contracts';
+import { buildGoalReport, planGoal, projectAccumulation, type AccumulationRow, type ContributionTiming, type GoalInput, type RateConvention } from '@/contracts';
 import { NumberField } from '@/components/ui/NumberField';
 import { Choice } from '@/components/ui/Choice';
 import { KpiCard, KpiGrid, Money } from '@/components/ui/Kpi';
@@ -14,7 +14,6 @@ import { CONVENTION_LABEL, RateConventionField, TIMING_LABEL, TimingField } from
 import { ExportButtons, SavePlanButton, ShareButton } from '@/components/calculator/ActionButtons';
 import { formatINR } from '@/lib/format/inr';
 import { buildQuery, optionFromParams, useFields, type SearchParamsRecord } from './useFields';
-import { goalReport } from './reports';
 import { monthLabel, shortMonthLabel } from './format';
 
 const DEFAULTS = { g: 5000000, y: 15, r: 11, i: 6, c: 200000, cur: 10000, s: 0 } as const satisfies Record<string, number>;
@@ -187,26 +186,8 @@ export function GoalPlanner({ params }: { params?: SearchParamsRecord }) {
               fileBase="goal-planner"
               disabled={!result?.ok}
               buildReport={() => {
-                if (!result?.ok) throw new Error('No result');
-                return goalReport(
-                  [
-                    ['Goal amount (₹)', v.g],
-                    ['Goal basis', basis === 'today' ? "Today's rupees" : 'Future rupees'],
-                    ['Years', v.y],
-                    ['Expected annual return (%)', v.r],
-                    ['Inflation (%)', v.i],
-                    ['Existing savings (₹)', v.c],
-                    ['Current monthly SIP (₹)', v.cur],
-                    ['Annual step-up (%)', v.s],
-                  ],
-                  [
-                    ['Contribution timing', TIMING_LABEL[timing]],
-                    ['Rate convention', CONVENTION_LABEL[rc]],
-                  ],
-                  result.value,
-                  path,
-                  result.warnings,
-                );
+                if (!result?.ok || !input) throw new Error('No result');
+                return buildGoalReport(input, result.value, { generatedAt: new Date().toISOString(), warnings: result.warnings });
               }}
             />
           </>

@@ -28,7 +28,7 @@ export default function DataSourcesPage() {
               <strong>Freshness:</strong> NAVs are published once per business day. A NAV is shown as the latest available when it is within three weekdays of today (India time); otherwise it is marked stale.
             </li>
             <li>
-              <strong>Caching:</strong> our server keeps a copy for up to 30 minutes. If the provider fails, the last good copy is served with its original dates and a &quot;Cached&quot; label.
+              <strong>Caching:</strong> our server reuses a successfully fetched copy for up to 6 hours (NAVs change at most once per business day). If the provider fails, the last good copy is served with its original dates and a &quot;Cached&quot; label.
             </li>
             <li>The provider&apos;s terms for commercial use and redistribution must be confirmed before public launch.</li>
           </ul>

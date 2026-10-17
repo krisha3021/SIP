@@ -90,6 +90,7 @@ export default function MethodologyPage() {
           <h2 id="nav">Historical NAV analysis</h2>
           <ul>
             <li>Only observed NAVs are used. Nothing is interpolated or invented before a scheme&apos;s first NAV.</li>
+            <li>Backtests and rolling returns run only for Growth options. IDCW (dividend) NAVs fall with each payout, and without the payout history the result would understate returns, so those schemes (and schemes whose option cannot be identified) are refused with an explanation.</li>
             <li>Each SIP instalment is allotted at the first NAV on or after its scheduled date, within a maximum lag; otherwise it is skipped and listed.</li>
             <li>Holdings are valued at the last NAV on or before the end date. XIRR uses actual dates with ACT/365F day count, and reports when it cannot find a rate rather than guessing one.</li>
             <li>Maximum drawdown is measured on the NAV, not on the balance, so new contributions cannot hide a fall.</li>

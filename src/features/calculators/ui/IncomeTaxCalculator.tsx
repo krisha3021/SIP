@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { compareIncomeTax, SUPPORTED_TAX_YEARS, TAX_YEARS, type IncomeTaxInput, type RegimeEstimate } from '@/contracts';
+import { buildIncomeTaxReport, compareIncomeTax, SUPPORTED_TAX_YEARS, TAX_YEARS, type IncomeTaxInput, type RegimeEstimate } from '@/contracts';
 import { NumberField } from '@/components/ui/NumberField';
 import { Choice, SelectField } from '@/components/ui/Choice';
 import { KpiCard, KpiGrid, Money } from '@/components/ui/Kpi';
@@ -10,7 +10,6 @@ import { CalculatorLayout, CalcErrorState, MethodNote, Warnings } from '@/compon
 import { ExportButtons, SavePlanButton, ShareButton } from '@/components/calculator/ActionButtons';
 import { formatINR } from '@/lib/format/inr';
 import { buildQuery, optionFromParams, useFields, type SearchParamsRecord } from './useFields';
-import { taxReport } from './reports';
 
 type AgeBand = 'below60' | 'age60to80' | 'above80';
 // Income is deliberately NOT read from or written to share links.
@@ -176,21 +175,8 @@ export function IncomeTaxCalculator({ params }: { params?: SearchParamsRecord })
               fileBase="income-tax"
               disabled={!result?.ok}
               buildReport={() => {
-                if (!result?.ok) throw new Error('No result');
-                return taxReport(
-                  [
-                    ['Financial year', fy],
-                    ['Age band', age],
-                    ['Salary income (₹)', v.sal],
-                    ['Other income (₹)', v.oth],
-                    ['80C (₹)', v.c80],
-                    ['80CCD(1B) (₹)', v.nps],
-                    ['80D self (₹)', v.d80s],
-                    ['80D parents (₹)', v.d80p],
-                    ['Parents senior citizens', parentsSenior],
-                  ],
-                  result.value,
-                );
+                if (!result?.ok || !input) throw new Error('No result');
+                return buildIncomeTaxReport(input, result.value, { generatedAt: new Date().toISOString(), warnings: result.warnings });
               }}
             />
           </>
