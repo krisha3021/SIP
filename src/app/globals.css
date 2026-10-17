@@ -1,43 +1,225 @@
 @import 'tailwindcss';
 
+/*
+ * Lakshya design tokens. Forest-green primary on warm-neutral surfaces.
+ * Contrast is measured by `node scripts/contrast.mjs` (WCAG 2.x): text pairs ≥ 4.5:1,
+ * focus ring / strong borders / chart series ≥ 3:1 against surfaces, in both themes.
+ * Keep the dark block below and the prefers-color-scheme copy in sync.
+ */
 :root {
-  --color-bg: #fafaf7;
-  --color-surface: #ffffff;
-  --color-text: #17191a;
-  --color-text-muted: #4a4f4c;
-  --color-border: #e2e0d6;
-  --color-brand: #0f5132;
-  --color-brand-contrast: #ffffff;
+  --bg: #f6f4ee;
+  --surface: #ffffff;
+  --surface-2: #efebe1;
+  --text: #1b1f1c;
+  --text-muted: #4d544f;
+  --border: #ddd7c9;
+  --border-strong: #857d6b;
+  --brand: #1b5e3f;
+  --brand-strong: #134530;
+  --brand-soft: #e2efe6;
+  --brand-contrast: #ffffff;
+  --focus: #1b5e3f;
+  --danger: #a3261c;
+  --danger-soft: #fbe9e6;
+  --warning: #7a4f00;
+  --warning-soft: #fbf0d9;
+  --info: #1f4f7a;
+  --info-soft: #e5eef7;
+  --chart-1: #1b5e3f;
+  --chart-2: #8a6a14;
+  --chart-3: #3b6aa0;
+  --chart-grid: #e3ddcf;
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --bg: #101512;
+  --surface: #17201b;
+  --surface-2: #1e2a23;
+  --text: #edf0eb;
+  --text-muted: #b3bcb5;
+  --border: #2f3c35;
+  --border-strong: #7f8e85;
+  --brand: #74d3a0;
+  --brand-strong: #a5e6c2;
+  --brand-soft: #1d3a2b;
+  --brand-contrast: #0c1a12;
+  --focus: #74d3a0;
+  --danger: #ff9d90;
+  --danger-soft: #3a1d1a;
+  --warning: #f0c56a;
+  --warning-soft: #352a14;
+  --info: #9cc6f0;
+  --info-soft: #182a3b;
+  --chart-1: #74d3a0;
+  --chart-2: #e0b75a;
+  --chart-3: #8ab8ec;
+  --chart-grid: #2b3830;
+  color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #0f1412;
-    --color-surface: #161d1a;
-    --color-text: #eef1ef;
-    --color-text-muted: #b4bcb7;
-    --color-border: #2a3430;
-    --color-brand: #5fc795;
-    --color-brand-contrast: #0b1310;
+  :root:not([data-theme='light']) {
+    --bg: #101512;
+    --surface: #17201b;
+    --surface-2: #1e2a23;
+    --text: #edf0eb;
+    --text-muted: #b3bcb5;
+    --border: #2f3c35;
+    --border-strong: #7f8e85;
+    --brand: #74d3a0;
+    --brand-strong: #a5e6c2;
+    --brand-soft: #1d3a2b;
+    --brand-contrast: #0c1a12;
+    --focus: #74d3a0;
+    --danger: #ff9d90;
+    --danger-soft: #3a1d1a;
+    --warning: #f0c56a;
+    --warning-soft: #352a14;
+    --info: #9cc6f0;
+    --info-soft: #182a3b;
+    --chart-1: #74d3a0;
+    --chart-2: #e0b75a;
+    --chart-3: #8ab8ec;
+    --chart-grid: #2b3830;
+    color-scheme: dark;
   }
 }
 
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-text: var(--text);
+  --color-muted: var(--text-muted);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-soft: var(--brand-soft);
+  --color-on-brand: var(--brand-contrast);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-heading), Georgia, serif;
+}
+
+@layer base {
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
-  background: var(--color-bg);
-  color: var(--color-text);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
+  line-height: 1.55;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+a {
+  color: var(--brand);
+  text-underline-offset: 3px;
+}
+
+/* Anchored targets clear the sticky header. */
+[id] {
+  scroll-margin-top: 5.5rem;
+}
+
+/* Plain links inside text are underlined so they are not distinguished by colour alone. */
+a:where(:not([class])) {
+  text-decoration: underline;
 }
 
 :focus-visible {
-  outline: 3px solid var(--color-brand);
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.num {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.skip-link {
+  position: absolute;
+  left: 0.75rem;
+  top: -4rem;
+  z-index: 100;
+  padding: 0.5rem 0.875rem;
+  background: var(--brand);
+  color: var(--brand-contrast);
+  border-radius: 0.5rem;
+  font-weight: 600;
+}
+.skip-link:focus {
+  top: 0.75rem;
+}
+}
+
+/* Range input styled with tokens; the native control keeps keyboard support. */
+@layer base {
+  input[type='range'] {
+    accent-color: var(--brand);
+    height: 1.75rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+@media print {
+  :root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-2: #ffffff;
+    --text: #000000;
+    --text-muted: #333333;
+    --border: #999999;
+  }
+  .no-print,
+  header[data-site-header],
+  footer[data-site-footer] nav,
+  nav[aria-label='Breadcrumb'] {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  body {
+    font-size: 11pt;
+  }
+  section,
+  table {
+    break-inside: avoid;
+  }
+  a {
+    color: #000000;
+    text-decoration: none;
+  }
+}
+
+.print-only {
+  display: none;
 }

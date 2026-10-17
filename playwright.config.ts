@@ -17,5 +17,7 @@ export default defineConfig({
     port: PORT,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // e2e never reaches a live provider: fund API calls are mocked in the browser, and the server's provider is off.
+    env: { NAV_PROVIDER: 'none', NEXT_TELEMETRY_DISABLED: '1' },
   },
 });
