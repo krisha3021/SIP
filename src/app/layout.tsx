@@ -3,12 +3,13 @@ import { Fraunces, Inter } from 'next/font/google';
 import { SiteHeader } from '@/components/layout/SiteHeader';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 import { THEME_BOOT_SCRIPT } from '@/components/layout/ThemeToggle';
+import { resolveSiteUrl } from './site-url';
 import './globals.css';
 
 const body = Inter({ subsets: ['latin'], variable: '--font-body', display: 'swap' });
 const heading = Fraunces({ subsets: ['latin'], variable: '--font-heading', display: 'swap', weight: ['500', '600', '700'] });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+const siteUrl = resolveSiteUrl();
 
 export const metadata: Metadata = {
   title: { default: 'Lakshya — Investment planning & mutual fund research', template: '%s · Lakshya' },

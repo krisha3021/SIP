@@ -1,7 +1,8 @@
 import type { MetadataRoute } from 'next';
+import { resolveSiteUrl } from './site-url';
 
 export default function robots(): MetadataRoute.Robots {
-  const site = process.env.NEXT_PUBLIC_SITE_URL;
+  const site = resolveSiteUrl();
   const isPreview = Boolean(process.env.VERCEL_ENV && process.env.VERCEL_ENV !== 'production');
   return {
     rules: isPreview ? { userAgent: '*', disallow: '/' } : { userAgent: '*', allow: '/', disallow: ['/api/'] },
