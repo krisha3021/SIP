@@ -59,6 +59,13 @@ export function useFields<K extends string>(defaults: Record<K, number | ''>, pa
   return { raw, set, reset, values, parseErrors, allParsed };
 }
 
+/** Removes keys from a query string, e.g. holdings that must not appear in a public share link. */
+export function dropParams(query: string, keys: string[]): string {
+  const p = new URLSearchParams(query);
+  keys.forEach((k) => p.delete(k));
+  return p.toString();
+}
+
 /** Builds a share query from raw field text and options. Only the keys passed are included. */
 export function buildQuery(entries: Record<string, string | number | boolean | null | undefined>): string {
   const p = new URLSearchParams();

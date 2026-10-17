@@ -14,7 +14,7 @@ import { CalculatorLayout, CalcErrorState, ConventionsLine, MethodNote, Warnings
 import { TIMING_LABEL, TimingField } from '@/components/calculator/ConventionFields';
 import { ExportButtons, SavePlanButton, ShareButton } from '@/components/calculator/ActionButtons';
 import { formatINR, formatPct } from '@/lib/format/inr';
-import { buildQuery, optionFromParams, useFields, type SearchParamsRecord } from './useFields';
+import { buildQuery, dropParams, optionFromParams, useFields, type SearchParamsRecord } from './useFields';
 import { formatCount, formatShare } from './format';
 
 const DEFAULTS = { m: 15000, c: 0, y: 20, r: 12, vol: 16, s: 5, g: 5000000, i: 6, n: 2000, seed: 20240601 } as const satisfies Record<string, number>;
@@ -298,7 +298,7 @@ export function MonteCarlo({ params }: { params?: SearchParamsRecord }) {
         }}
         actions={
           <>
-            <ShareButton path="/calculators/monte-carlo" query={query} />
+            <ShareButton path="/calculators/monte-carlo" query={dropParams(query, ['c'])} />
             <SavePlanButton calculator="Monte Carlo" path="/calculators/monte-carlo" query={query} defaultName="Monte Carlo scenario" />
             <ExportButtons
               fileBase="monte-carlo"
@@ -311,6 +311,7 @@ export function MonteCarlo({ params }: { params?: SearchParamsRecord }) {
           </>
         }
       />
+      <p className="text-sm text-muted">Share links leave out the amount you already hold; saved plans (kept only in this browser) include it.</p>
       <MethodNote>
         <ul>
           <li>Each month&apos;s return is drawn at random from a lognormal distribution calibrated so that the average yearly growth equals your expected return.</li>

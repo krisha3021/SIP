@@ -25,6 +25,7 @@ import { formatINR } from '@/lib/format/inr';
 import { buildQuery, optionFromParams, useFields, type SearchParamsRecord } from '@/features/calculators/ui/useFields';
 import { GlidePathChart, RangeBar } from './GlidePathChart';
 import { StressTest } from './StressTest';
+import { RuleTableEditor, useRuleTable } from './RuleTableEditor';
 
 type Stability = (typeof INCOME_STABILITY)[number];
 type Experience = (typeof EXPERIENCE)[number];
@@ -100,7 +101,9 @@ export function LifeStagePlanner({ params }: { params?: SearchParamsRecord }) {
     };
   }, [s.allParsed, p.allParsed, s.values, p.values, stability, experience, reaction, pfrda]);
 
-  const result = useMemo(() => (input ? planLifeStageRisk(input) : null), [input]);
+  const rules = useRuleTable();
+  // An edited table is used only after the engine's own schema accepts it.
+  const result = useMemo(() => (input && rules.config ? planLifeStageRisk(input, rules.config) : null), [input, rules.config]);
   const errField = result && !result.ok && result.error.field ? FIELD_MAP[result.error.field] : undefined;
   const err = (k: string) =>
     (s.parseErrors as Record<string, string | undefined>)[k] ?? (p.parseErrors as Record<string, string | undefined>)[k] ?? (errField === k && result && !result.ok ? result.error.message : null);
@@ -170,8 +173,32 @@ export function LifeStagePlanner({ params }: { params?: SearchParamsRecord }) {
     </>
   );
 
+  const editedBanner = rules.edited && rules.config && (
+    <div role="status" data-testid="edited-rules">
+      <Notice tone="warning" title="Edited rules — differs from Lakshya's published table">
+        <p>
+          {rules.changes.length} value(s) changed in this page. Results below use your edited table.{' '}
+          <button type="button" onClick={rules.reset} className="font-semibold underline">
+            Reset to the published table
+          </button>
+        </p>
+      </Notice>
+    </div>
+  );
+
   let results: React.ReactNode;
-  if (!result || !result.ok) {
+  if (!rules.config) {
+    results = (
+      <>
+        <MandatoryNotice text={LIFE_STAGE_NOTICE} />
+        <div role="alert">
+          <Notice tone="danger" title="No result: the edited rule table is not valid">
+            Fix or reset the edits in “Edit the rule table” below.
+          </Notice>
+        </div>
+      </>
+    );
+  } else if (!result || !result.ok) {
     results = (
       <>
         <MandatoryNotice text={LIFE_STAGE_NOTICE} />
@@ -185,6 +212,7 @@ export function LifeStagePlanner({ params }: { params?: SearchParamsRecord }) {
     results = (
       <>
         <MandatoryNotice text={r.notice} />
+        {editedBanner}
         <section aria-labelledby="profile-heading" className="rounded-lg border border-brand/50 bg-brand-soft p-4" data-testid="profile">
           <h3 id="profile-heading" className="font-sans text-sm font-semibold uppercase tracking-wide text-brand-strong">
             Illustrative profile
@@ -323,6 +351,7 @@ export function LifeStagePlanner({ params }: { params?: SearchParamsRecord }) {
         form={form}
         results={results}
         formTitle="Your answers"
+        badge={<Badge tone="info">Educational illustration</Badge>}
         onReset={() => {
           s.reset();
           p.reset();
@@ -330,6 +359,7 @@ export function LifeStagePlanner({ params }: { params?: SearchParamsRecord }) {
           setExperience('3-to-10-years');
           setReaction('hold');
           setPfrda(false);
+          rules.reset();
         }}
         actions={
           <>
@@ -340,12 +370,26 @@ export function LifeStagePlanner({ params }: { params?: SearchParamsRecord }) {
               disabled={!result?.ok}
               buildReport={() => {
                 if (!result?.ok || !input) throw new Error('No result');
-                return buildLifeStageReport(input, result.value, { generatedAt: new Date().toISOString(), warnings: result.warnings });
+                const report = buildLifeStageReport(input, result.value, { generatedAt: new Date().toISOString(), warnings: result.warnings });
+                if (!rules.edited) return report;
+                // Edited rules are local to this page; the export records exactly what was changed.
+                return {
+                  ...report,
+                  tables: [
+                    ...report.tables,
+                    {
+                      name: 'Edited rule table',
+                      columns: [{ header: 'Rule (path)' }, { header: "Lakshya's published value" }, { header: 'Edited value' }],
+                      rows: rules.changes.map(([path, published, edited]) => [path, published ?? 'none', edited ?? 'none']),
+                    },
+                  ],
+                };
               }}
             />
           </>
         }
       />
+      <RuleTableEditor state={rules} />
       <p className="text-sm text-muted">
         Share links and saved plans keep only your ages, horizon, emergency-fund target and risk answers. Income, expenses, EMIs, savings, dependants and earners are
         never included. The exported file does include them, because it is created on your device for you.

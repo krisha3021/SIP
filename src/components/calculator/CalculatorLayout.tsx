@@ -11,12 +11,15 @@ export function CalculatorLayout({
   onReset,
   actions,
   formTitle = 'Your assumptions',
+  badge = <ProjectionBadge />,
 }: {
   form: React.ReactNode;
   results: React.ReactNode;
   onReset: () => void;
   actions?: React.ReactNode;
   formTitle?: string;
+  /** Label beside the results heading; projections use "Projection (assumption-based)". */
+  badge?: React.ReactNode;
 }) {
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(20rem,26rem)_1fr]">
@@ -43,7 +46,7 @@ export function CalculatorLayout({
             <h2 id="results-heading" className="text-xl font-semibold">
               Results
             </h2>
-            <ProjectionBadge />
+            {badge}
           </div>
           <div className="no-print flex flex-wrap gap-2">
             {actions}

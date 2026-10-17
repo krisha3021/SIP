@@ -263,19 +263,22 @@ test.describe('planner screens', () => {
   test('Life-stage stress test uses a chosen scheme, and refuses IDCW', async ({ page }) => {
     await mockFundApi(page);
     await page.goto('/calculators/life-stage-planner');
-    const search = page.getByLabel('Find an equity scheme for the stress test');
-    await search.fill('fixture');
-    await page.getByRole('button', { name: 'Search', exact: true }).click();
-    await page.getByRole('button', { name: /TEST FIXTURE Synthetic Fund - Direct Plan - Growth/ }).click();
+    const slot = page.getByTestId('stress-slot-equity');
+    await slot.getByLabel('Find an equity scheme for the stress test').fill('fixture');
+    await slot.getByRole('button', { name: 'Search', exact: true }).click();
+    await slot.getByRole('button', { name: /TEST FIXTURE Synthetic Fund - Direct Plan - Growth/ }).click();
     const stress = page.getByTestId('stress-result');
     await expect(stress).toContainText('Largest observed fall');
-    await expect(stress.getByRole('heading', { name: 'Data source', exact: true })).toBeVisible();
     await expect(stress.getByText('Upper end of equity range')).toBeVisible();
-    await stress.getByRole('button', { name: 'Choose another scheme' }).first().click();
-    await page.getByLabel('Find an equity scheme for the stress test').fill('fixture');
-    await page.getByRole('button', { name: 'Search', exact: true }).click();
-    await page.getByRole('button', { name: new RegExp(`Scheme code ${IDCW_FIXTURE_CODE}`) }).click();
-    await expect(page.getByText('This scheme cannot be used for the stress test')).toBeVisible();
+    // Without debt or gold schemes, those are assumed unchanged.
+    await expect(page.getByTestId('stress-asset-changes')).toContainText('assumed unchanged');
+    await slot.getByText('Data source for this series').click();
+    await expect(slot.getByRole('heading', { name: 'Data source', exact: true })).toBeVisible();
+    await slot.getByRole('button', { name: 'Choose another scheme' }).click();
+    await slot.getByLabel('Find an equity scheme for the stress test').fill('fixture');
+    await slot.getByRole('button', { name: 'Search', exact: true }).click();
+    await slot.getByRole('button', { name: new RegExp(`Scheme code ${IDCW_FIXTURE_CODE}`) }).click();
+    await expect(slot.getByText('This scheme cannot be used for the stress test')).toBeVisible();
   });
 
   test('PFRDA comparison shows its source and extension label', async ({ page }) => {
@@ -315,5 +318,85 @@ test.describe('planner screens', () => {
     await expect(page.getByTestId('result-summary')).toContainText('Highest projected value');
     const [csv] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'CSV' }).click()]);
     expect(csv.suggestedFilename()).toMatch(/^lakshya-scenario-lab-/);
+  });
+});
+
+test.describe('final coverage', () => {
+  test('cron route refuses without a secret and with a wrong one', async ({ request }) => {
+    // The e2e server has no CRON_SECRET, so every request must be refused (fails closed).
+    expect((await request.get('/api/cron/validate-mf-data')).status()).toBe(401);
+    const wrong = await request.get('/api/cron/validate-mf-data', { headers: { authorization: 'Bearer not-the-secret-0123456789-abcdefghijkl' } });
+    expect(wrong.status()).toBe(401);
+  });
+
+  test('Monte Carlo shows progress, then results', async ({ page }) => {
+    await page.goto('/calculators/monte-carlo?n=10000&y=40');
+    await expect(page.getByTestId('mc-progress')).toBeVisible();
+    await expect(page.getByRole('progressbar')).toBeVisible();
+    await expect(page.getByTestId('mc-headline')).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId('mc-headline')).toContainText('10,000');
+  });
+
+  test('Monte Carlo cancel stops the run', async ({ page }) => {
+    await page.goto('/calculators/monte-carlo?n=10000&y=60');
+    await expect(page.getByTestId('mc-progress')).toBeVisible();
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    await expect(page.getByText('Simulation cancelled')).toBeVisible();
+    await expect(page.getByTestId('mc-headline')).toHaveCount(0);
+  });
+
+  test('historical backtest refuses an IDCW option with the engine message', async ({ page }) => {
+    await mockFundApi(page);
+    await page.goto(`/historical?scheme=${IDCW_FIXTURE_CODE}`);
+    await expect(page.getByText('A backtest is not available for this scheme')).toBeVisible();
+    await expect(page.getByText(/IDCW \(dividend\) option/)).toBeVisible();
+    await expect(page.getByTestId('kpi-value')).toHaveCount(0);
+  });
+
+  test('holdings stay out of share links on corpus + SIP and retirement', async ({ page }) => {
+    for (const path of ['/calculators/corpus-sip', '/calculators/retirement-planner']) {
+      await page.goto(path);
+      const corpus = page.getByLabel(path.includes('corpus') ? 'Existing corpus today' : 'Retirement savings today', { exact: true });
+      await corpus.fill('7654321');
+      const url = await sharedUrl(page);
+      expect(url.searchParams.has('c')).toBe(false);
+      expect(url.toString()).not.toContain('7654321');
+    }
+  });
+
+  test('life-stage planner is labelled an educational illustration', async ({ page }) => {
+    await page.goto('/calculators/life-stage-planner');
+    const header = page.locator('#results-heading').locator('xpath=..');
+    await expect(header.getByText('Educational illustration', { exact: true })).toBeVisible();
+    await expect(page.getByText('Projection (assumption-based)')).toHaveCount(0);
+  });
+
+  test('rule-table edits are validated, flagged, and resettable', async ({ page }) => {
+    await page.goto('/calculators/life-stage-planner');
+    await page.getByText('Edit the rule table').click();
+    const field = page.locator('input[name="capacity.horizonYears.maxPoints"]');
+    await field.fill('31');
+    // The engine's schema requires capacity weights to sum to 100.
+    await expect(page.getByRole('alert').filter({ hasText: 'These edits cannot be used' })).toContainText('Capacity weights must sum to 100');
+    await field.fill('30');
+    await page.locator('input[name="tolerance.lossReaction.points.hold"]').fill('40');
+    await expect(page.getByTestId('edited-rules')).toContainText("Edited rules — differs from Lakshya's published table");
+    expect(page.url()).not.toContain('lossReaction');
+    await page.getByTestId('edited-rules').getByRole('button', { name: 'Reset to the published table' }).click();
+    await expect(page.getByTestId('edited-rules')).toHaveCount(0);
+  });
+
+  test('stress test accepts optional debt and gold schemes with their own dates', async ({ page }) => {
+    await mockFundApi(page);
+    await page.goto('/calculators/life-stage-planner');
+    for (const slot of ['equity', 'debt', 'gold']) {
+      const s = page.getByTestId(`stress-slot-${slot}`);
+      await s.getByRole('searchbox').fill('fixture');
+      await s.getByRole('button', { name: 'Search', exact: true }).click();
+      await s.getByRole('button', { name: /TEST FIXTURE Synthetic Fund - Direct Plan - Growth/ }).click();
+    }
+    await expect(page.getByTestId('stress-own-debt')).toContainText(/peak \d{4}-\d{2}-\d{2}, trough \d{4}-\d{2}-\d{2}/);
+    await expect(page.getByTestId('stress-own-gold')).toBeVisible();
+    await expect(page.getByTestId('stress-asset-changes')).not.toContainText('assumed unchanged');
   });
 });

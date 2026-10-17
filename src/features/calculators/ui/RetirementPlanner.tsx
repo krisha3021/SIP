@@ -13,7 +13,7 @@ import { CalculatorLayout, CalcErrorState, ConventionsLine, MethodNote, Warnings
 import { CONVENTION_LABEL, RateConventionField, TIMING_LABEL, TimingField } from '@/components/calculator/ConventionFields';
 import { ExportButtons, SavePlanButton, ShareButton } from '@/components/calculator/ActionButtons';
 import { formatINR, formatPct } from '@/lib/format/inr';
-import { buildQuery, optionFromParams, useFields, type SearchParamsRecord } from './useFields';
+import { buildQuery, dropParams, optionFromParams, useFields, type SearchParamsRecord } from './useFields';
 import { monthLabel, shortMonthLabel } from './format';
 
 const DEFAULTS = { cur: 32, ret: 60, until: 85, m: 25000, c: 500000, s: 5, pre: 11, post: 7, i: 6, wi: '' } as const satisfies Record<string, number | ''>;
@@ -67,6 +67,8 @@ export function RetirementPlanner({ params }: { params?: SearchParamsRecord }) {
   const err = (k: string) =>
     (f.parseErrors as Record<string, string | undefined>)[k] ?? (p.parseErrors as Record<string, string | undefined>)[k] ?? (errField === k && result && !result.ok ? result.error.message : null);
   const query = buildQuery({ ...f.raw, t: timing, rc, o: order });
+  // Retirement savings already held stay out of public share links; local saves keep them.
+  const shareQuery = dropParams(query, ['c']);
   const path = '/calculators/retirement-planner';
 
   const form = (
@@ -245,7 +247,7 @@ export function RetirementPlanner({ params }: { params?: SearchParamsRecord }) {
         }}
         actions={
           <>
-            <ShareButton path={path} query={query} />
+            <ShareButton path={path} query={shareQuery} />
             <SavePlanButton calculator="Retirement planner" path={path} query={query} defaultName="Retirement plan" />
             <ExportButtons
               fileBase="retirement-planner"
@@ -258,6 +260,10 @@ export function RetirementPlanner({ params }: { params?: SearchParamsRecord }) {
           </>
         }
       />
+      <p className="text-sm text-muted">
+        Share links leave out your current retirement savings and the income you want; saved plans (kept only in this browser) include your savings but not the
+        income.
+      </p>
       <MethodNote>
         <ul>
           <li>The corpus is projected month by month until retirement, with the same conventions as the SIP calculator.</li>
