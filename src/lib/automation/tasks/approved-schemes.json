@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "notes": "Schemes the daily data-quality task validates. Identity fields were checked against MFAPI /mf/{code} responses on 2026-10-17. The owner must approve every addition. Growth options only: IDCW NAVs are not backtested.",
+  "schemes": [
+    {
+      "schemeCode": 122639,
+      "nameContains": "Parag Parikh Flexi Cap Fund",
+      "fundHouse": "PPFAS Mutual Fund",
+      "expectedPlan": "Direct",
+      "expectedOption": "Growth"
+    },
+    {
+      "schemeCode": 122640,
+      "nameContains": "Parag Parikh Flexi Cap Fund",
+      "fundHouse": "PPFAS Mutual Fund",
+      "expectedPlan": "Regular",
+      "expectedOption": "Growth"
+    }
+  ]
+}

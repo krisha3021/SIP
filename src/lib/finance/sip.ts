@@ -171,6 +171,13 @@ export function projectAccumulation(input: AccumulationInput): CalcResult<Accumu
   if (v.affordableMonthlyLimit !== undefined && lastScheduled > v.affordableMonthlyLimit) {
     warnings.push('The scheduled contribution exceeds the monthly budget you entered.');
   }
+  if (
+    v.stepUp.mode !== 'none' &&
+    v.stepUp.maxMonthlyContribution !== undefined &&
+    v.stepUp.maxMonthlyContribution < v.monthlyContribution
+  ) {
+    warnings.push('The step-up cap is below the starting contribution, so it has no effect; contributions never fall below the starting amount.');
+  }
   if (v.annualReturnPct < 0) warnings.push('A negative return assumption means the plan loses value over time.');
 
   const yearly = rows.filter((row) => row.month % 12 === 0 || row.month === v.months);

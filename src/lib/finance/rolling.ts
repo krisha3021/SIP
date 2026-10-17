@@ -26,7 +26,7 @@ export function rollingReturns(raw: NavPoint[], windowYears: number, toleranceDa
   if (!Number.isInteger(windowYears) || windowYears < 1 || windowYears > 30) {
     return fail('INVALID_INPUT', 'Window must be a whole number of years between 1 and 30.', 'windowYears');
   }
-  const { points } = prepareNavSeries(raw);
+  const { points, warnings } = prepareNavSeries(raw);
   if (points.length < 2) return fail('INSUFFICIENT_DATA', 'Not enough NAV observations.');
 
   const windows: RollingWindow[] = [];
@@ -56,5 +56,5 @@ export function rollingReturns(raw: NavPoint[], windowYears: number, toleranceDa
       positiveShare: sorted.filter((x) => x > 0).length / sorted.length,
       count: sorted.length,
     },
-  });
+  }, warnings);
 }

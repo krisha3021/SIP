@@ -55,6 +55,9 @@ export interface GoalResult {
 
 /** Projected nominal value at the horizon for a starting contribution `s`. */
 function projectedValue(v: z.infer<typeof goalInputSchema>, s: number): number | null {
+  // The accumulation engine rejects an all-zero plan. A 1-paisa corpus stands in, and its exactly known
+  // growth (0.01 · (1 + r)^n) is subtracted again so it never leaks into reported values.
+  const dust = s === 0 && v.initialCorpus === 0 ? 0.01 : 0;
   const res = projectAccumulation({
     monthlyContribution: s,
     initialCorpus: v.initialCorpus,
@@ -63,10 +66,11 @@ function projectedValue(v: z.infer<typeof goalInputSchema>, s: number): number |
     timing: v.timing,
     rateConvention: v.rateConvention,
     stepUp: v.stepUp,
-    // The accumulation engine rejects an all-zero plan; a 1-paisa corpus is a numerically harmless stand-in.
-    ...(s === 0 && v.initialCorpus === 0 ? { initialCorpus: 0.01 } : {}),
+    ...(dust ? { initialCorpus: dust } : {}),
   });
-  return res.ok ? res.value.summary.finalValue : null;
+  if (!res.ok) return null;
+  const dustFv = dust * Math.pow(1 + monthlyRate(v.annualReturnPct, v.rateConvention), v.months);
+  return Math.max(0, res.value.summary.finalValue - dustFv);
 }
 
 function hasCap(stepUp: StepUp): boolean {

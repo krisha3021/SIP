@@ -24,7 +24,8 @@ export type CalcErrorCode =
   | 'INSUFFICIENT_DATA'
   | 'START_BEFORE_INCEPTION'
   | 'UNSUPPORTED'
-  | 'UNVERIFIED_RULES';
+  | 'UNVERIFIED_RULES'
+  | 'CANCELLED';
 
 export interface CalcError {
   code: CalcErrorCode;

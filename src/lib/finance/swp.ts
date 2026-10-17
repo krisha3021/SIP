@@ -98,7 +98,8 @@ export function simulateSwp(input: SwpInput): CalcResult<SwpResult> {
       closingBalance: balance,
       cumulativeWithdrawn: cumulative,
       realClosingBalance: toTodaysRupees(balance, v.inflationPct, m),
-      realWithdrawal: toTodaysRupees(actual, v.inflationPct, m),
+      // A withdrawal taken at the start of month m is paid at t = m − 1; one taken at the end, at t = m.
+      realWithdrawal: toTodaysRupees(actual, v.inflationPct, v.order === 'withdraw-then-grow' ? m - 1 : m),
     });
 
     if (shortfall || balance === 0) {

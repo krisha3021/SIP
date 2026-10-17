@@ -3,9 +3,9 @@
  *
  * The UI, API routes, charts, and exports import financial types and engines ONLY through this module.
  * Changing anything exported here requires a documented change in docs/CONTRACTS.md, a notice to the
- * other agent, and updated tests on both sides. Version: 0.1.0 (baseline, 2026-10-17).
+ * other agent, and updated tests on both sides. Version: 0.2.0 (additive, 2026-10-17; baseline 0.1.0).
  */
-export const CONTRACT_VERSION = '0.1.0';
+export const CONTRACT_VERSION = '0.2.0';
 
 // ── Result envelope and conventions ──────────────────────────────────────────
 export type { CalcResult, CalcError, CalcErrorCode, ContributionTiming, RateConvention } from '@/lib/finance/types';
@@ -19,11 +19,24 @@ export { simulateSwp, swpInputSchema } from '@/lib/finance/swp';
 export type { SwpInput, SwpResult, SwpRow } from '@/lib/finance/swp';
 export { runMonteCarlo, monteCarloInputSchema, MAX_SIMULATIONS } from '@/lib/finance/monteCarlo';
 export type { MonteCarloInput, MonteCarloResult, PercentileBand } from '@/lib/finance/monteCarlo';
+// 0.2.0: chunked, cancellable Monte Carlo for a Web Worker (identical results to runMonteCarlo).
+export { runMonteCarloChunked, createMonteCarloSession } from '@/lib/finance/monteCarlo';
+export type { MonteCarloRunOptions, MonteCarloSession } from '@/lib/finance/monteCarlo';
 export { xirr } from '@/lib/finance/xirr';
 export type { DatedCashFlow, XirrResult } from '@/lib/finance/xirr';
 export { compareIncomeTax, incomeTaxInputSchema } from '@/lib/finance/tax/incomeTax';
 export type { IncomeTaxInput, IncomeTaxComparison, RegimeEstimate } from '@/lib/finance/tax/incomeTax';
 export { SUPPORTED_TAX_YEARS, TAX_YEARS } from '@/lib/finance/tax/config';
+
+// ── 0.2.0 planning engines ───────────────────────────────────────────────────
+export { planCashFlow, cashFlowInputSchema } from '@/lib/finance/cashflow';
+export type { CashFlowInput, CashFlowResult } from '@/lib/finance/cashflow';
+export { compareScenarios, MAX_SCENARIOS } from '@/lib/finance/scenarios';
+export type { ScenarioComparisonInput, ScenarioComparisonResult, ScenarioOutcome } from '@/lib/finance/scenarios';
+export { planRetirement, retirementInputSchema } from '@/lib/finance/retirement';
+export type { RetirementInput, RetirementResult } from '@/lib/finance/retirement';
+export { exploreAllocation, allocationInputSchema, DEFAULT_ALLOCATION_ASSUMPTIONS, ALLOCATION_NOTICE } from '@/lib/finance/allocation';
+export type { AllocationInput, AllocationResult, AllocationStep } from '@/lib/finance/allocation';
 
 // ── Historical analysis on observed NAVs ─────────────────────────────────────
 export type { NavPoint } from '@/lib/finance/navSeries';
@@ -41,9 +54,34 @@ export { applyFetchAttempt, navFreshness } from '@/lib/data/provenance';
 // ── Canonical report payload (Agent 2 fills; Agent 1 renders/delivers) ───────
 export type { Report, ReportTable } from '@/lib/export/report';
 export { BRAND, ATTRIBUTION, DISCLAIMER } from '@/lib/export/report';
+// 0.2.0: one builder per calculator; exports never recalculate in the UI.
+export {
+  buildAccumulationReport,
+  buildGoalReport,
+  buildSwpReport,
+  buildMonteCarloReport,
+  buildNavBacktestReport,
+  buildRollingReport,
+  buildBoosterReport,
+  buildIncomeTaxReport,
+  buildCashFlowReport,
+  buildScenarioReport,
+  buildRetirementReport,
+  buildAllocationReport,
+} from '@/lib/export/reportBuilders';
+export type { ReportContext } from '@/lib/export/reportBuilders';
 
 // ── Automation run report (Agent 2 produces; Agent 1's admin UI displays) ────
-export type AutomationRunStatus = 'queued' | 'running' | 'succeeded' | 'partial' | 'failed' | 'cancelled' | 'skipped-duplicate';
+export type AutomationRunStatus =
+  | 'queued'
+  | 'running'
+  | 'succeeded'
+  | 'partial'
+  | 'failed'
+  | 'cancelled'
+  | 'skipped-duplicate'
+  /** 0.2.0: the kill switch was on; nothing was fetched or written. */
+  | 'skipped-disabled';
 
 export interface DataQualityFinding {
   schemeCode: number;
@@ -74,3 +112,5 @@ export interface AutomationRunReport {
   aiSummary: { status: 'disabled' | 'skipped-budget' | 'failed' | 'ok'; text: string | null } | null;
   usage: { upstreamRequests: number; aiTokens: number };
 }
+
+// Server-only data services and the automation task are exported from '@/contracts/server' (0.2.0).

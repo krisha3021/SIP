@@ -1,7 +1,8 @@
 # Shared Contract — Agent 1 (Website) ⇄ Agent 2 (Finance & Data)
 
-Contract version: **0.1.0**, the baseline from Phase 1, dated 2026-10-17. The code lives in
-`src/contracts/index.ts`.
+Contract version: **0.2.0** (additive, 2026-10-17; baseline 0.1.0 from Phase 1). The code lives in
+`src/contracts/index.ts` (safe for client and server) and `src/contracts/server.ts` (server-only: data services and
+automation; never import it from a client component).
 
 The UI, API routes, charts, and exports must import financial engines and types **only** from
 `@/contracts`. Presentation code never re-implements a formula. This includes "simple" values such as gains or
@@ -34,11 +35,46 @@ real value: render the fields the engine returns.
 - Dependency additions and changes to the database schema are proposed by Agent 2 and applied by Agent 1, because
   Agent 1 owns the manifests and migrations.
 
+## Changelog
+### 0.2.0 — 2026-10-17 (Agent 2, additive; branch `agent-2/finance-data`)
+- `CalcErrorCode` gains `'CANCELLED'`. `AutomationRunStatus` gains `'skipped-disabled'` (the kill switch was on).
+  Consumers that `switch` exhaustively on these unions need one new case each.
+- New engines in `@/contracts`: `planCashFlow`, `compareScenarios` (max 3, `MAX_SCENARIOS`), `planRetirement`,
+  `exploreAllocation` (with `ALLOCATION_NOTICE`, which the UI must display with every result), and
+  `runMonteCarloChunked` / `createMonteCarloSession` (the Web Worker hook: `onProgress`, `AbortSignal`, injectable
+  yield; results are identical to `runMonteCarlo`).
+- Report builders in `@/contracts`: `build{Accumulation,Goal,Swp,MonteCarlo,NavBacktest,Rolling,Booster,IncomeTax,
+  CashFlow,Scenario,Retirement,Allocation}Report(…, { generatedAt, warnings })`. `Report` gains an optional
+  `warnings: string[]`, rendered by `reportToCsv` and `reportToXlsx`. Exports must use these builders and never
+  recalculate.
+- New entry point `@/contracts/server`: `createNavService` (cache → de-duplication → last-known-good, with
+  `NavServiceResult.source`, `.error: DataError` and `.freshness`), `InMemoryCacheStore` / the `CacheStore`
+  interface, `RequestDeduper`, `DataError` and `DATA_ERROR_HTTP_STATUS` (suggested HTTP mapping),
+  `backtestScheme` / `rollingReturnsForScheme` / `checkBacktestEligibility` (IDCW and unknown options →
+  `UNSUPPORTED`), `runValidateMfData`, `MfDataStore` / `InMemoryMfDataStore`, `isAuthorizedCronRequest`,
+  `consoleTaskLogger`, and `AiSummarizer` (interface only).
+- Behaviour fixes inside existing engines. Signatures are unchanged.
+  - `inferPlanOption` no longer reads option words that are part of a fund's own name, such as "Growth Fund" or
+    "Dividend Yield". Bonus options are now reported as `Unknown`.
+  - SWP `realWithdrawal` for `withdraw-then-grow` now deflates at the payment time (m − 1).
+  - `planGoal.projectedWithCurrent` no longer includes a 1-paisa internal stand-in.
+  - `rollingReturns` now passes through data-cleaning warnings.
+  - `projectAccumulation` now warns when a step-up cap is below the starting amount.
+  - The MFAPI adapter accepts `signal` and adds the `UpstreamError` kind `'cancelled'`; a cancelled request is
+    never retried.
+
 ## Open items for agreement
-- [ ] Cash-flow planner engine (`src/lib/finance/cashflow.ts`). Agent 2 to add it, with a contract export.
-- [ ] Scenario-comparison payload covering up to 3 scenarios. Agent 2 to propose a shape.
-- [ ] Monte Carlo progress and cancellation hooks for Web Worker use. Agent 2 to propose them. Agent 1 to host the worker.
-- [ ] Capital-gains estimation module. Agent 2 owns it; it is separate from income tax.
-- [ ] Storage interface for last-known-good NAVs and run history. Agent 2 proposes the schema; Agent 1 provisions storage
-      (needs owner approval if the service is paid).
-- [ ] API route response envelopes for `/api/funds/*`. Agent 1 owns the routes, Agent 2 owns the adapter output types.
+- [x] Cash-flow planner engine. Done in 0.2.0 (`planCashFlow`).
+- [x] Scenario-comparison payload covering up to 3 scenarios. Done in 0.2.0 (`compareScenarios`).
+- [x] Monte Carlo progress and cancellation hooks. Done in 0.2.0. **Agent 1** hosts the Web Worker: call
+      `runMonteCarloChunked(input, { onProgress: (d, t) => postMessage(...), signal })` and abort the controller on a
+      cancel message.
+- [ ] Capital-gains estimation module. Agent 2 owns it; it is separate from income tax. Not started.
+- [x] Storage interface for last-known-good NAVs and run history. Proposed: `CacheStore`, `MfDataStore`, and the SQL
+      schema in docs/DATA-SOURCES.md §Storage. **Agent 1** provisions the store (owner approval needed if it is paid).
+- [ ] API route response envelopes for `/api/funds/*`. Agent 1 owns the routes. Proposal: return
+      `NavServiceResult` (state + source + error + freshness) as-is, mapping `error.code` through
+      `DATA_ERROR_HTTP_STATUS` only when there is no data at all.
+- [ ] Cron route for `validate-mf-data` (Agent 1). See docs/DATA-SOURCES.md §"How Agent 1 invokes it".
+- [ ] Dependency proposal (Agent 1 to decide): add `server-only` so that importing `@/contracts/server` from a
+      client component fails the build.

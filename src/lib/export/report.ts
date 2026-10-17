@@ -27,6 +27,8 @@ export interface Report {
   summary: Array<[label: string, value: CellValue]>;
   tables: ReportTable[];
   methodology: string;
+  /** Engine warnings and data-quality notes, shown verbatim (added in contract 0.2.0). */
+  warnings?: string[];
 }
 
 function csvEscape(v: CellValue): string {
@@ -55,6 +57,11 @@ export function reportToCsv(report: Report): string {
   lines.push('');
   lines.push('Summary');
   report.summary.forEach(([k, v]) => kv(k, v));
+  if (report.warnings?.length) {
+    lines.push('');
+    lines.push('Warnings');
+    report.warnings.forEach((w) => lines.push(csvEscape(w)));
+  }
   for (const t of report.tables) {
     lines.push('');
     lines.push(csvEscape(t.name));
@@ -95,6 +102,11 @@ export async function reportToXlsx(report: Report): Promise<Uint8Array> {
   info.addRow([]);
   info.addRow(['Summary']).font = { bold: true };
   report.summary.forEach(([k, v]) => add(k, v));
+  if (report.warnings?.length) {
+    info.addRow([]);
+    info.addRow(['Warnings']).font = { bold: true };
+    report.warnings.forEach((w) => info.addRow([sanitiseCell(w)]));
+  }
   info.addRow([]);
   add('Methodology', report.methodology);
   add('Disclaimer', DISCLAIMER);

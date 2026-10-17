@@ -27,7 +27,8 @@ export const searchQuerySchema = z
   .max(80, 'Search is limited to 80 characters')
   .regex(/^[\p{L}\p{N} .&()'\-/]+$/u, 'Search contains unsupported characters');
 
-const navHistorySchema = z.object({
+/** Shape of `/mf/{code}` (and `/mf/{code}/latest`) responses as observed on 2026-10-17. */
+export const navHistorySchema = z.object({
   meta: z.object({
     fund_house: z.string().nullable().optional(),
     scheme_type: z.string().nullable().optional(),
@@ -62,22 +63,52 @@ export interface SchemeNavHistory {
   droppedRows: number;
 }
 
-/** Plan and option inferred from the scheme name. Returns 'Unknown' rather than guessing. */
+const OPTION_IDCW_RE = /\b(idcw|dividend|payout|reinvest(ment)?)\b/;
+const OPTION_GROWTH_RE = /\bgrowth\b/;
+const PLAN_RE = /\b(direct|regular)\b/;
+
+function classifyOption(text: string): Provenance['option'] {
+  // "Dividend Yield" is a fund strategy, not a distribution option.
+  const t = text.replace(/\bdividend\s+yield\b/g, ' ');
+  const growth = OPTION_GROWTH_RE.test(t);
+  const idcw = OPTION_IDCW_RE.test(t);
+  if (growth && !idcw) return 'Growth';
+  if (idcw && !growth) return 'IDCW';
+  return 'Unknown';
+}
+
+function classifyPlan(text: string): Provenance['plan'] {
+  const direct = /\bdirect\b/.test(text);
+  const regular = /\bregular\b/.test(text);
+  if (direct && !regular) return 'Direct';
+  if (regular && !direct) return 'Regular';
+  return 'Unknown';
+}
+
+/**
+ * Plan and option inferred from the scheme name. Returns 'Unknown' rather than guessing.
+ *
+ * Fund names themselves can contain option words ("Nippon India Growth Fund - IDCW",
+ * "ICICI Prudential Dividend Yield Equity Fund - Growth"). AMFI scheme names put the plan and option
+ * after the fund name, separated by "-" (with or without spaces). Only the text after the first
+ * separator is classified for the option, so a word inside the fund name never decides it. The whole
+ * name is used only when there is no separator. Conflicting signals (both Growth and IDCW) and bonus
+ * options yield 'Unknown'.
+ */
 export function inferPlanOption(name: string): { plan: Provenance['plan']; option: Provenance['option'] } {
   const n = name.toLowerCase();
-  const plan = /\bdirect\b/.test(n) ? 'Direct' : /\bregular\b/.test(n) ? 'Regular' : 'Unknown';
-  const option = /\bgrowth\b/.test(n)
-    ? 'Growth'
-    : /\b(idcw|dividend|payout|reinvest(ment)?|bonus)\b/.test(n)
-      ? 'IDCW'
-      : 'Unknown';
+  const parts = n.split(/\s*[-–]\s*/);
+  const suffix = parts.length > 1 ? parts.slice(1).join(' ') : n;
+  const option: Provenance['option'] = /\bbonus\b/.test(suffix) ? 'Unknown' : classifyOption(suffix);
+  // "Direct"/"Regular" practically never occur inside a fund's own name, so the whole name is a safe fallback.
+  const plan = PLAN_RE.test(suffix) ? classifyPlan(suffix) : classifyPlan(n);
   return { plan, option };
 }
 
 export class UpstreamError extends Error {
   constructor(
     message: string,
-    readonly kind: 'timeout' | 'network' | 'http' | 'invalid-response' | 'not-found',
+    readonly kind: 'timeout' | 'network' | 'http' | 'invalid-response' | 'not-found' | 'cancelled',
     readonly status?: number,
   ) {
     super(message);
@@ -90,6 +121,8 @@ export interface FetchOptions {
   timeoutMs?: number;
   retries?: number;
   now?: () => Date;
+  /** Caller cancellation (e.g. an automation run). An aborted request is never retried. */
+  signal?: AbortSignal;
 }
 
 async function getJson(path: string, opts: FetchOptions): Promise<unknown> {
@@ -99,9 +132,11 @@ async function getJson(path: string, opts: FetchOptions): Promise<unknown> {
   const url = `${MFAPI_BASE}${path}`;
   let lastErr: UpstreamError | null = null;
   for (let attempt = 0; attempt <= retries; attempt++) {
+    if (opts.signal?.aborted) throw new UpstreamError('Request cancelled', 'cancelled');
     try {
+      const timeout = AbortSignal.timeout(timeoutMs);
       const res = await fetchImpl(url, {
-        signal: AbortSignal.timeout(timeoutMs),
+        signal: opts.signal ? AbortSignal.any([opts.signal, timeout]) : timeout,
         headers: { Accept: 'application/json', 'User-Agent': 'Lakshya/0.1 (educational)' },
         cache: 'no-store',
       });
@@ -117,8 +152,9 @@ async function getJson(path: string, opts: FetchOptions): Promise<unknown> {
         throw new UpstreamError('Provider returned malformed JSON', 'invalid-response');
       }
     } catch (e) {
-      if (e instanceof UpstreamError && (e.kind === 'not-found' || e.kind === 'invalid-response' || (e.kind === 'http' && (e.status ?? 0) < 500 && e.status !== 429))) throw e;
+      if (e instanceof UpstreamError && (e.kind === 'not-found' || e.kind === 'cancelled' || e.kind === 'invalid-response' || (e.kind === 'http' && (e.status ?? 0) < 500 && e.status !== 429))) throw e;
       const name = (e as { name?: string })?.name;
+      if (opts.signal?.aborted) throw new UpstreamError('Request cancelled', 'cancelled');
       lastErr =
         e instanceof UpstreamError
           ? e
@@ -186,6 +222,15 @@ export function parseNavHistory(json: unknown, fetchedAt: string): SchemeNavHist
       notes,
     },
   };
+}
+
+/**
+ * Fetches the unparsed `/mf/{code}` JSON. Used by the data-quality task, which must see malformed and
+ * duplicate rows that `parseNavHistory` would drop or collapse. Same allowlist, timeout and retry rules.
+ */
+export async function fetchNavHistoryRaw(schemeCode: number, opts: FetchOptions = {}): Promise<unknown> {
+  const code = schemeCodeSchema.parse(String(schemeCode));
+  return getJson(`/mf/${code}`, opts);
 }
 
 export async function fetchNavHistory(schemeCodeRaw: string, opts: FetchOptions = {}): Promise<SchemeNavHistory> {
