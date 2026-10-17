@@ -22,6 +22,7 @@ import { cashFlowInputSchema, type CashFlowInput, type CashFlowResult } from '..
 import type { ScenarioComparisonResult } from '../finance/scenarios';
 import { retirementInputSchema, type RetirementInput, type RetirementResult } from '../finance/retirement';
 import { allocationInputSchema, type AllocationInput, type AllocationResult } from '../finance/allocation';
+import { lifeStageInputSchema, type LifeStageInput, type LifeStageResult, type AssetRange } from '../finance/lifeStage';
 import type { Provenance } from '../data/provenance';
 import type { StepUp } from '../finance/sip';
 import type { ContributionTiming, RateConvention } from '../finance/types';
@@ -588,5 +589,80 @@ export function buildAllocationReport(input: AllocationInput, result: Allocation
         rows: result.steps.map((s) => [s.step, s.equityPct, s.explanation]),
       },
     ],
+  };
+}
+
+// ── Life-stage & Risk Planner ────────────────────────────────────────────────
+
+const rangeText = (r: AssetRange) =>
+  `Equity ${r.equity.min}–${r.equity.max}%, debt ${r.debt.min}–${r.debt.max}%, gold ${r.gold.min}–${r.gold.max}%`;
+
+export function buildLifeStageReport(input: LifeStageInput, result: LifeStageResult, ctx: ReportContext): Report {
+  const v = lifeStageInputSchema.parse(input);
+  const factorRows = (kind: string, b: LifeStageResult['capacity']): CellValue[][] =>
+    b.factors.map((f) => [kind, f.label, f.value, f.points, f.maxPoints, f.explanation]);
+  const tables: ReportTable[] = [
+    {
+      name: 'Score factors',
+      columns: [{ header: 'Score' }, { header: 'Factor' }, { header: 'Your answer' }, { header: 'Points' }, { header: 'Maximum' }, { header: 'Why it matters' }],
+      rows: [...factorRows('Capacity', result.capacity), ...factorRows('Tolerance', result.tolerance)],
+    },
+    {
+      name: 'Glide path',
+      columns: [{ header: 'Age' }, { header: 'Years to retirement' }, { header: 'Phase' }, { header: 'Equity min %' }, { header: 'Equity max %' }, { header: 'Debt min %' }, { header: 'Debt max %' }, { header: 'Gold min %' }, { header: 'Gold max %' }],
+      rows: result.glidePath.map((g) => [g.age, g.yearsToRetirement, g.phase, g.range.equity.min, g.range.equity.max, g.range.debt.min, g.range.debt.max, g.range.gold.min, g.range.gold.max]),
+    },
+  ];
+  if (result.prerequisites.length) {
+    tables.push({
+      name: 'Prerequisites',
+      columns: [{ header: 'Flag' }, { header: 'Explanation' }, { header: 'Equity cap %' }],
+      rows: result.prerequisites.map((f) => [f.id, f.explanation, f.equityCapPct ?? 'No cap']),
+    });
+  }
+  if (result.pfrdaReference) {
+    const ref = result.pfrdaReference;
+    tables.push({
+      name: 'PFRDA reference',
+      columns: [{ header: 'Age' }, ...ref.series.map((s) => ({ header: `${s.name} equity %` }))],
+      rows: result.glidePath.map((g, i) => [g.age, ...ref.series.map((s) => s.points[i]!.equityPct)]),
+    });
+  }
+  return {
+    ...base('Life-stage & Risk Planner (educational)', ctx, result.notice),
+    assumptions: [
+      ['Current age', v.currentAge],
+      ['Target retirement age', v.targetRetirementAge],
+      ['Dependants', v.dependants],
+      ['Earning members', v.earningMembers],
+      ['Monthly household income (₹)', v.monthlyHouseholdIncome],
+      ['Monthly essential expenses (₹)', v.monthlyEssentialExpenses],
+      ['Monthly EMIs (₹)', v.monthlyEmis],
+      ['Income stability', v.incomeStability],
+      ['Emergency fund held (months)', v.emergencyFundMonthsHeld],
+      ['Emergency fund target (months)', v.emergencyFundTargetMonths],
+      ['Investment horizon (years)', v.investmentHorizonYears],
+      ['Investing experience', v.investmentExperience],
+      ['Reaction to a 20% fall', v.lossReaction],
+      ['Rule version', result.configVersion],
+    ],
+    conventions: [
+      ['Overall profile', 'The lower of the capacity and tolerance scores (Lakshya rule)'],
+      ['Ranges', 'Minimum–maximum shares by asset class; debt is the remainder. Not a target and not a recommendation.'],
+      ['Glide path', 'Equity maximum capped by years remaining to retirement; today’s range also applies prerequisite caps'],
+      ...(result.pfrdaReference
+        ? ([['PFRDA reference', `${result.pfrdaReference.source}, ${result.pfrdaReference.url} (verified ${result.pfrdaReference.verifiedOn})`]] as Array<[string, string]>)
+        : []),
+    ],
+    summary: [
+      ['Risk capacity score (of 100)', result.capacity.score],
+      ['Risk tolerance score (of 100)', result.tolerance.score],
+      ['Profile', result.profile.label],
+      ['Profile set by', result.profile.limitedBy],
+      ['Profile range', rangeText(result.profileRange)],
+      ["Today's range", rangeText(result.currentRange)],
+      ['Prerequisites flagged', result.prerequisites.length],
+    ],
+    tables,
   };
 }

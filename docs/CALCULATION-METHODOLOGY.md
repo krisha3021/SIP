@@ -1,6 +1,6 @@
 # Calculation Methodology
 
-Owner: Agent 2 (finance & data). Contract version 0.2.0. Last reviewed 2026-10-17.
+Owner: Agent 2 (finance & data). Contract version 0.3.0. Last reviewed 2026-10-17.
 
 This document states every convention the engines in `src/lib/finance/` use. The UI, the API, and the exports
 show results only through these engines (`@/contracts`), so this document describes every number on the site.
@@ -255,3 +255,85 @@ Inputs are re-parsed only to show resolved defaults. Every report carries assump
 historical data), the summary, the tables, the methodology label (Projection / Historical data / Synthetic
 simulation), engine warnings, the disclaimer, and the attribution. All text passes through the formula-injection
 guard.
+
+## 17. Life-stage & Risk Planner (`lifeStage.ts`, `lifeStageConfig.ts`, `lifeStageStress.ts`; added in 0.3.0)
+
+**Mandatory notice.** The UI must show this text with every result. The constant is `LIFE_STAGE_NOTICE`:
+
+> Educational illustration only. This is not a suitability assessment, not investment advice, and not a recommendation
+> of any product, fund or allocation. Lakshya is not registered with SEBI as an investment adviser or research analyst.
+> The scores and ranges come from a fixed, published rule applied to the answers you gave; they do not consider your full
+> financial situation and do not predict returns. For personalised advice, consult a SEBI-registered investment adviser.
+
+The planner names no funds or products. It predicts no returns, does not describe anything as "best" or "optimal",
+and is not AI. It uses no proprietary third-party method. Every weight, threshold and table is in
+`lifeStageConfig.ts` (`LIFE_STAGE_CONFIG`, version `lakshya-life-stage-2026-10-17`). These are **Lakshya's own
+documented educational rule**, not a regulator's or a firm's. A caller can pass an edited copy. That copy is
+validated first: the weights of each score must sum to 100, ranges must have min ≤ max, and every profile must have
+exactly one band. An invalid table is rejected and never used.
+
+**Risk capacity** is objective, scored 0–100, and is the sum of five factors:
+
+| Factor | Input | Points |
+|---|---|---|
+| Horizon (max 30) | years | ≥15: 30 · ≥8: 23 · ≥5: 15 · ≥3: 8 · <3: 0 |
+| Dependants per earner (max 20) | dependants ÷ earners | 0: 20 · ≤1: 15 · ≤2: 10 · ≤3: 5 · more: 0 · no earners: 0 |
+| Income stability (max 20) | answer | salaried-stable 20 · salaried-variable 12 · self-employed 10 · irregular 0 |
+| EMI ÷ income (max 15) | % | 0: 15 · ≤20: 12 · ≤35: 7 · ≤50: 3 · more: 0 · no income: 0 |
+| Emergency cover (max 15) | months held ÷ **user's own** target | ≥1: 15 · ≥0.5: 8 · >0: 3 · 0: 0 |
+
+**Risk tolerance** is subjective, scored 0–100, and comes from two answers. The first is the reaction to a 20% fall:
+sell all 0, sell some 20, hold 50, invest more 70 (max 70). The second is investing experience: none 0, under 3
+years 12, 3–10 years 22, over 10 years 30 (max 30). Each factor is returned with its points, its maximum, and a
+plain-language explanation.
+
+**Profile.** The overall score is `min(capacity, tolerance)`. Bands: ≥85 high growth, ≥65 growth-oriented,
+≥45 balanced, ≥25 moderately conservative, otherwise conservative. Using the lower of the two scores is Lakshya's
+documented rule. It applies the conservative choice whenever ability and willingness disagree. We looked for a
+public primary source (for example, CFA Institute material) that states this rule in those words and could not
+verify one, so no source is cited.
+
+**Prerequisites** are evaluated before any range:
+- Emergency fund below the user's target: flag only by default.
+- EMIs above 40% of income: flag only.
+- No earning member: equity capped at 20% in today's range.
+- Horizon under 3 years: equity capped at 10% in today's range.
+- Essentials plus EMIs above income: flag only.
+
+All the caps are in the config, and a `null` cap means the condition is flagged but no cap is applied. When several
+caps apply, the tightest one is used.
+
+**Ranges.** Each profile has an editable equity range and gold range (min–max %). Debt is the remainder:
+`[max(0, 100 − equity.max − gold.max), 100 − equity.min − gold.min]`. The output is a range, not a point and not a
+target.
+
+**Glide path.** The glide path has one row per age, from the current age to the plan-until age. That age defaults to
+retirement + 15 and is capped at 110. Each row caps the equity maximum by years to retirement: ≥15 years no extra
+cap, ≥10 years 70%, ≥5 years 55%, ≥1 year 40%, and from the retirement age onwards 30%. The equity minimum is capped
+at the same level. Because the cap never rises with age, the equity range never widens and the debt minimum never
+falls. Tests check this monotonicity. Today's range is the first row of the glide path with the prerequisite caps
+then applied. The glide path itself carries no prerequisite caps, because those describe today's situation.
+
+**Optional PFRDA reference curve** (`includePfrdaReference: true`). This is the equity share by age of PFRDA's NPS
+Auto Choice life-cycle funds: LC75 High (15E/55Y), LC50 Moderate (10E/55Y), LC25 Low (5E/55Y), and LC Aggressive
+(35E/55Y). The values are quoted from the "Asset Allocation in Auto Choice" table at
+https://pfrda.org.in/intermediaries/registered-intermediaries/pension-funds and were **verified on 2026-10-17**
+against a live copy of that page. The published table runs from "up to 35 years" through 55. After 55, Lakshya
+holds the age-55 value constant, which follows the "…/55Y" fund names; this is not a row of PFRDA's table. The curve
+is shown for comparison only. It is one product's rule, not a recommendation. Re-verify it whenever PFRDA revises
+the scheme structure (the funds were last renamed by PFRDA circular in 2025).
+
+**Stress test** (`stressTestRange`). It finds the largest peak-to-trough fall in an equity NAV or index series
+**supplied by the caller**. An optional window can restrict the search. Debt and gold series, when supplied, are
+measured over the same dates, using the last observation on or before the peak and the trough. Without a usable
+series, an asset is assumed unchanged; it is listed in `assumedUnchanged` and a warning is raised. The test applies
+the result to two mixes: equity at the range minimum and at the maximum, gold at the midpoint of its range, and debt
+taking the remainder. It reports the percentage change and, optionally, the change in rupees. There are no
+hard-coded crash figures. The result describes one observed past fall, not a forecast.
+
+**Supported domain.** Ages 18–100, with retirement strictly after the current age (early retirement is allowed).
+The plan-until age goes up to 110. Up to 20 dependants and 20 earners. The emergency-fund target is 1–36 months and
+the horizon 0–60 years. Tests: `tests/finance/lifeStage.test.ts`. These cover hand-added factor scores, every table
+boundary, band edges (85 → high growth, 78 → growth), retirement ≤ current age and other invalid inputs, the
+prerequisite flags and caps, glide-path rows derived by hand, monotonicity, determinism, edited and invalid configs,
+the PFRDA mapping, the notice and forbidden wording, the stress test, and the report payload.

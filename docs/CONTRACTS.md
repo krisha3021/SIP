@@ -1,6 +1,6 @@
 # Shared Contract — Agent 1 (Website) ⇄ Agent 2 (Finance & Data)
 
-Contract version: **0.2.1** (re-exports only, 2026-10-17; baseline 0.1.0 from Phase 1). The code lives in
+Contract version: **0.3.0** (additive, 2026-10-17; baseline 0.1.0 from Phase 1). The code lives in
 `src/contracts/index.ts` (safe for client and server) and `src/contracts/server.ts` (server-only: data services and
 automation; never import it from a client component).
 
@@ -36,6 +36,23 @@ real value: render the fields the engine returns.
   Agent 1 owns the manifests and migrations.
 
 ## Changelog
+### 0.3.0 — 2026-10-17 (Agent 2, additive; branch `agent-2/life-stage-planner`)
+- Adds the Life-stage & Risk Planner to `@/contracts`:
+  - `planLifeStageRisk(input, config?)` and `lifeStageInputSchema`. The planner returns separate capacity and
+    tolerance scores with per-factor points, the profile (the lower of the two scores), prerequisite flags,
+    asset-class min–max ranges, a year-by-year glide path, and an optional PFRDA reference curve.
+  - `LIFE_STAGE_NOTICE`. **The UI must display it** with every result.
+  - `LIFE_STAGE_CONFIG`, `lifeStageConfigSchema` and the `LifeStageConfig` type. This is the single editable table
+    of weights, thresholds and ranges; an edited copy is validated before use.
+  - `PFRDA_AUTO_CHOICE_REFERENCE`, quoted from pfrda.org.in and verified on 2026-10-17.
+  - `stressTestRange(range, { equity, debt?, gold? }, { window?, amount? })`. It works only on `NavPoint[]` series
+    that the caller supplies, and contains no built-in crash figures.
+  - `buildLifeStageReport(input, result, ctx)` and `deriveRange`.
+  - Types: `AssetRange`, `PctRange`, `FactorScore`, `ScoreBreakdown`, `PrerequisiteFlag`, `GlidePathRow`, `ProfileId`,
+    `StressTestResult`, and the enums `INCOME_STABILITY`, `EXPERIENCE`, `LOSS_REACTION`, `PROFILE_IDS`,
+    `PROFILE_LABELS`.
+- Nothing existing changed.
+
 ### 0.2.1 — 2026-10-17 (Agent 1, owner-approved; re-exports only, no logic change)
 - `@/contracts` re-exports `reportToCsv` and `reportToXlsx`, so exports import only from the contract.
 - `@/contracts/server` starts with `import 'server-only'` (package `server-only@0.0.1` added), so importing it from a
