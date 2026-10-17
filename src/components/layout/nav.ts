@@ -2,12 +2,23 @@ export interface NavItem {
   href: string;
   label: string;
   description: string;
+  /** Sub-links shown in the mobile drawer and footer. */
+  children?: Array<{ href: string; label: string }>;
 }
 
 /** Primary navigation. Order matters: it is the order in the header, drawer and home page. */
 export const PRIMARY_NAV: NavItem[] = [
-  { href: '/calculators', label: 'Calculators', description: 'SIP, step-up, lumpsum, goal, SWP, Monte Carlo and tax' },
-  { href: '/goals', label: 'Goals & Retirement', description: 'Plan a goal, test a withdrawal plan, explore uncertainty' },
+  { href: '/calculators', label: 'Calculators', description: 'SIP, goals, retirement, cash flow, allocation, Monte Carlo and tax' },
+  {
+    href: '/goals',
+    label: 'Goals & Retirement',
+    description: 'Life-stage & Risk Planner, goals, retirement and withdrawals',
+    children: [
+      { href: '/calculators/life-stage-planner', label: 'Life-stage & Risk Planner' },
+      { href: '/calculators/retirement-planner', label: 'Retirement planner' },
+      { href: '/calculators/goal-planner', label: 'Goal planner' },
+    ],
+  },
   { href: '/funds', label: 'Fund Research', description: 'Search schemes and read their published NAV history' },
   { href: '/historical', label: 'Historical Analysis', description: 'Backtest a SIP on observed NAVs' },
   { href: '/scenario-lab', label: 'Scenario Lab', description: 'Compare up to three sets of assumptions' },

@@ -6,6 +6,47 @@ export const metadata: Metadata = { title: 'Learn', description: 'Short explaine
 
 const ARTICLES = [
   {
+    id: 'capacity-tolerance',
+    title: 'Risk capacity and risk tolerance are different',
+    body: (
+      <>
+        <p>
+          Risk capacity is how much loss your situation can absorb: how long until you need the money, how many people depend on each earner, how steady your
+          income is, how much goes to EMIs, and whether you have an emergency fund. Risk tolerance is how much loss you are willing to sit through.
+        </p>
+        <p>
+          The two can disagree. The <Link href="/calculators/life-stage-planner">Life-stage &amp; Risk Planner</Link> shows both scores side by side, with each
+          factor&apos;s points, and uses the lower one. It is an educational illustration, not a suitability assessment.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: 'glide-path',
+    title: 'Why a glide path narrows as retirement nears',
+    body: (
+      <>
+        <p>
+          Money needed soon has little time to recover from a fall, so many plans reduce the share of equity as the need approaches. A glide path shows that
+          change year by year. Lakshya shows it as a range, not a single number, and can overlay the published PFRDA NPS Auto Choice curves for comparison.
+        </p>
+        <p>
+          See also the <Link href="/calculators/retirement-planner">retirement planner</Link> and the <Link href="/calculators/allocation-explorer">Allocation Explorer</Link>.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: 'surplus',
+    title: 'Start with cash flow',
+    body: (
+      <p>
+        Before investing, it helps to know your monthly surplus and to hold an emergency fund. The <Link href="/calculators/cash-flow">cash-flow planner</Link> shows a
+        surplus or a shortfall honestly, and how long it would take to build the emergency fund you choose.
+      </p>
+    ),
+  },
+  {
     id: 'timing',
     title: 'Start or end of the month: why timing changes the answer',
     body: (

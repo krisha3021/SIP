@@ -5,6 +5,8 @@
 import type { Page } from '@playwright/test';
 
 export const FIXTURE_CODE = 999001;
+/** Same synthetic series, labelled as an IDCW option, to exercise the eligibility refusal. */
+export const IDCW_FIXTURE_CODE = 999002;
 
 function syntheticNavs(): Array<{ date: string; nav: number }> {
   const out: Array<{ date: string; nav: number }> = [];
@@ -59,6 +61,12 @@ export const NAV_RESPONSE = {
   droppedRows: 0,
 };
 
+export const IDCW_NAV_RESPONSE = {
+  ...NAV_RESPONSE,
+  meta: { ...NAV_RESPONSE.meta, schemeCode: IDCW_FIXTURE_CODE, schemeName: 'TEST FIXTURE Synthetic Fund - Direct Plan - IDCW', option: 'IDCW' },
+  provenance: { ...NAV_RESPONSE.provenance, identifier: `Fixture ${IDCW_FIXTURE_CODE}`, option: 'IDCW' },
+};
+
 export async function mockFundApi(page: Page) {
   await page.route('**/api/funds/search?**', (route) =>
     route.fulfill({
@@ -66,9 +74,13 @@ export async function mockFundApi(page: Page) {
         ok: true,
         query: 'fixture',
         provider: 'Playwright fixture (synthetic test data)',
-        results: [{ schemeCode: FIXTURE_CODE, schemeName: NAV_RESPONSE.meta.schemeName, plan: 'Direct', option: 'Growth' }],
+        results: [
+          { schemeCode: FIXTURE_CODE, schemeName: NAV_RESPONSE.meta.schemeName, plan: 'Direct', option: 'Growth' },
+          { schemeCode: IDCW_FIXTURE_CODE, schemeName: IDCW_NAV_RESPONSE.meta.schemeName, plan: 'Direct', option: 'IDCW' },
+        ],
       },
     }),
   );
   await page.route(`**/api/funds/${FIXTURE_CODE}/nav`, (route) => route.fulfill({ json: NAV_RESPONSE }));
+  await page.route(`**/api/funds/${IDCW_FIXTURE_CODE}/nav`, (route) => route.fulfill({ json: IDCW_NAV_RESPONSE }));
 }

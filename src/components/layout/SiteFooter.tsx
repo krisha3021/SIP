@@ -21,11 +21,16 @@ export function SiteFooter() {
         <nav aria-label="Explore">
           <h2 className="font-sans text-sm font-semibold uppercase tracking-wide text-muted">Explore</h2>
           <ul className="mt-3 space-y-2 text-sm">
-            {PRIMARY_NAV.map((i) => (
+            {PRIMARY_NAV.flatMap((i) => [
               <li key={i.href}>
                 <Link href={i.href}>{i.label}</Link>
-              </li>
-            ))}
+              </li>,
+              ...(i.children ?? []).map((c) => (
+                <li key={c.href} className="pl-3">
+                  <Link href={c.href}>{c.label}</Link>
+                </li>
+              )),
+            ])}
           </ul>
         </nav>
         <nav aria-label="About and legal">

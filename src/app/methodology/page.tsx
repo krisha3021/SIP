@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { CONTRACT_VERSION, MAX_SIMULATIONS, SUPPORTED_TAX_YEARS, TAX_YEARS } from '@/contracts';
+import { ALLOCATION_NOTICE, CONTRACT_VERSION, LIFE_STAGE_NOTICE, MAX_SCENARIOS, MAX_SIMULATIONS, PFRDA_AUTO_CHOICE_REFERENCE, SUPPORTED_TAX_YEARS, TAX_YEARS } from '@/contracts';
 import { PageBody, PageHeader, Prose } from '@/components/layout/PageHeader';
 
 export const metadata: Metadata = {
@@ -26,6 +26,8 @@ export default function MethodologyPage() {
               <li><a href="#goal">Goal planner</a></li>
               <li><a href="#swp">SWP / withdrawals</a></li>
               <li><a href="#monte-carlo">Monte Carlo</a></li>
+              <li><a href="#life-stage">Life-stage &amp; Risk Planner</a></li>
+              <li><a href="#planning">Retirement, cash flow, scenarios and allocation</a></li>
               <li><a href="#tax">Income tax</a></li>
               <li><a href="#nav">Historical NAV analysis</a></li>
               <li><a href="#labels">Labels and freshness</a></li>
@@ -69,6 +71,32 @@ export default function MethodologyPage() {
             <li>Monthly log-returns are drawn from a normal distribution with yearly drift μ = ln(1 + E) − σ²/2, so average yearly growth equals the expected return E. The median path is therefore below the expected-return path when volatility σ is high.</li>
             <li>A seeded random generator makes runs reproducible. Up to {MAX_SIMULATIONS.toLocaleString('en-IN')} simulations run in a background thread.</li>
             <li>Success means a path&apos;s final value reaches the goal you set. It describes the model, not the real world: fat tails, volatility clustering, regime changes, fees and taxes are ignored.</li>
+          </ul>
+
+          <h2 id="life-stage">Life-stage &amp; Risk Planner</h2>
+          <p className="rounded-md border border-line bg-surface p-3 text-sm">{LIFE_STAGE_NOTICE}</p>
+          <ul>
+            <li>Risk capacity (0–100) adds points for horizon, dependants per earner, income stability, EMIs as a share of income, and emergency fund against your own target.</li>
+            <li>Risk tolerance (0–100) adds points for your stated reaction to a 20% fall and your investing experience.</li>
+            <li>The profile uses the lower of the two scores. Prerequisites are checked before any range; some limit today&apos;s equity range.</li>
+            <li>Equity and gold ranges come from a fixed table per profile; debt is the remainder. The output is always a min–max range, never a single number.</li>
+            <li>The glide path caps equity by years to retirement, so the range never widens with age.</li>
+            <li>
+              The optional PFRDA NPS Auto Choice curves are quoted from{' '}
+              <a href={PFRDA_AUTO_CHOICE_REFERENCE.url} rel="noopener noreferrer">
+                PFRDA
+              </a>{' '}
+              (verified {PFRDA_AUTO_CHOICE_REFERENCE.verifiedOn}). Values after age {PFRDA_AUTO_CHOICE_REFERENCE.holdsAfterAge} are Lakshya&apos;s extension.
+            </li>
+            <li>The stress test applies the largest fall observed in a scheme&apos;s published NAV history that you choose. It is one past fall, not a forecast.</li>
+          </ul>
+
+          <h2 id="planning">Retirement, cash flow, scenarios and allocation</h2>
+          <ul>
+            <li>Retirement: the SIP engine builds the corpus; your desired income is inflated to retirement; the SWP engine draws it down; the corpus needed is the present value of every withdrawal.</li>
+            <li>Cash flow: surplus = income − all outflows, shown as a shortfall when negative. No return is assumed unless you add a projection.</li>
+            <li>Scenario Lab: up to {MAX_SCENARIOS} scenarios run through the same SIP engine; differences are shown against the first.</li>
+            <li>Allocation Explorer: an editable age-based rule of thumb, with each step shown. {ALLOCATION_NOTICE}</li>
           </ul>
 
           <h2 id="tax">Income tax</h2>

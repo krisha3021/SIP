@@ -5,13 +5,15 @@ import { CALCULATORS } from '@/features/calculators/ui/registry';
 
 export const metadata: Metadata = {
   title: 'Goals & Retirement',
-  description: 'Plan a goal, test a retirement withdrawal plan and explore uncertainty with a Monte Carlo model.',
+  description: 'Life-stage & Risk Planner, goal planner, retirement planner, Monte Carlo and withdrawal tools.',
 };
 
 const STEPS = [
-  { slug: 'goal-planner', step: '1. Size the goal', text: 'Work out the monthly SIP a goal needs and how far your current SIP falls short.' },
-  { slug: 'monte-carlo', step: '2. Stress-test it', text: 'See how often a simple random-return model reaches the goal, and how wide the range is.' },
-  { slug: 'swp', step: '3. Plan the withdrawals', text: 'For retirement, test how long a corpus lasts with withdrawals that rise each year.' },
+  { slug: 'life-stage-planner', step: '1. Understand your risk', text: 'See your risk capacity and tolerance, prerequisite flags, and an educational range that narrows towards retirement.' },
+  { slug: 'goal-planner', step: '2. Size the goal', text: 'Work out the monthly SIP a goal needs and how far your current SIP falls short.' },
+  { slug: 'retirement-planner', step: '3. Plan retirement', text: 'Build a corpus until retirement, then check whether withdrawals last as long as you plan.' },
+  { slug: 'monte-carlo', step: '4. Explore uncertainty', text: 'See how often a simple random-return model reaches the goal, and how wide the range is.' },
+  { slug: 'swp', step: '5. Test withdrawals', text: 'Test how long a corpus lasts with withdrawals that rise each year.' },
 ];
 
 export default function GoalsPage() {
@@ -20,10 +22,10 @@ export default function GoalsPage() {
       <PageHeader
         crumbs={[{ label: 'Goals & Retirement' }]}
         title="Goals & Retirement"
-        lede="Three tools that work together. They share the same conventions, so a number from one can be checked in another."
+        lede="Tools that work together. They share the same conventions, so a number from one can be checked in another."
       />
       <PageBody>
-        <ol className="grid gap-4 md:grid-cols-3">
+        <ol className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {STEPS.map((s) => {
             const c = CALCULATORS.find((x) => x.slug === s.slug)!;
             return (

@@ -4,7 +4,8 @@ import { ScenarioLab } from '@/features/scenarios/ui/ScenarioLab';
 
 export const metadata: Metadata = { title: 'Scenario Lab', description: 'Compare up to three sets of SIP assumptions side by side.' };
 
-export default function ScenarioLabPage() {
+export default async function ScenarioLabPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const sp = await searchParams;
   return (
     <>
       <PageHeader
@@ -13,7 +14,7 @@ export default function ScenarioLabPage() {
         lede="Compare up to three sets of assumptions side by side. Each scenario runs through the same projection engine as the SIP calculator."
       />
       <PageBody>
-        <ScenarioLab />
+        <ScenarioLab params={sp} />
       </PageBody>
     </>
   );

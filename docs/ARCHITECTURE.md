@@ -17,7 +17,7 @@ consumed only through `@/contracts` (see `docs/CONTRACTS.md`).
 |---|---|---|
 | `/` | static | Positioning, entry points, honesty notes |
 | `/calculators` | static + client filter | Searchable directory built from `features/calculators/ui/registry.ts` |
-| `/calculators/[slug]` | dynamic (reads `searchParams` for share links) | `sip`, `step-up-sip`, `lumpsum`, `corpus-sip`, `goal-planner`, `swp`, `monte-carlo`, `income-tax` |
+| `/calculators/[slug]` | dynamic (reads `searchParams` for share links) | `sip`, `step-up-sip`, `lumpsum`, `corpus-sip`, `goal-planner`, `swp`, `monte-carlo`, `income-tax`, `life-stage-planner`, `cash-flow`, `retirement-planner`, `allocation-explorer`. Household finances (income, expenses, EMIs, dependants, earners, savings) are never read from or written to URLs. |
 | `/goals` | static | Goals & Retirement hub (goal planner, SWP, Monte Carlo) |
 | `/funds`, `/funds/[schemeCode]` | client data | Mutual Fund Research: search, NAV history, provenance, rolling returns |
 | `/historical` | client data | SIP backtest on observed NAVs (`backtestSipOnNav`) |

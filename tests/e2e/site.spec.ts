@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { FIXTURE_CODE, mockFundApi } from './fixtures';
+import { FIXTURE_CODE, IDCW_FIXTURE_CODE, mockFundApi } from './fixtures';
 
 const CORE_ROUTES = [
   '/',
@@ -13,6 +13,10 @@ const CORE_ROUTES = [
   '/calculators/swp',
   '/calculators/monte-carlo',
   '/calculators/income-tax',
+  '/calculators/life-stage-planner',
+  '/calculators/cash-flow',
+  '/calculators/retirement-planner',
+  '/calculators/allocation-explorer',
   '/goals',
   '/funds',
   '/historical',
@@ -194,7 +198,7 @@ test.describe('fund research (mocked API, synthetic fixture)', () => {
     await page.goto('/funds');
     await page.getByLabel('Search mutual fund schemes').fill('fixture');
     await page.getByRole('button', { name: 'Search' }).click();
-    await page.getByRole('link', { name: /TEST FIXTURE Synthetic Fund/ }).click();
+    await page.getByRole('link', { name: /TEST FIXTURE Synthetic Fund - Direct Plan - Growth/ }).click();
     await expect(page).toHaveURL(new RegExp(`/funds/${FIXTURE_CODE}$`));
     await expect(page.getByRole('heading', { name: 'Data source', exact: true })).toBeVisible();
     await expect(page.getByText('Synthetic simulation')).toBeVisible();
@@ -215,5 +219,101 @@ test.describe('fund research (mocked API, synthetic fixture)', () => {
     await page.goto('/funds/123');
     await expect(page.getByRole('alert').filter({ hasText: 'The NAV provider did not respond in time.' })).toBeVisible();
     await expect(page.getByText(/NAV on /)).toHaveCount(0);
+  });
+});
+
+// Household finances must never appear in share links (keys and the values typed in).
+const SENSITIVE_KEYS = ['inc', 'ess', 'emi', 'dep', 'earn', 'efh', 'oth', 'disc', 'inv', 'efs', 'amt'];
+
+async function sharedUrl(page: import('@playwright/test').Page): Promise<URL> {
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.getByRole('button', { name: 'Share link' }).click();
+  await expect(page.getByText(/Link copied/)).toBeVisible();
+  return new URL(await page.evaluate(() => navigator.clipboard.readText()));
+}
+
+function expectNoSensitive(url: URL, typedValues: string[]) {
+  expect([...url.searchParams.keys()].filter((k) => SENSITIVE_KEYS.includes(k))).toEqual([]);
+  for (const v of typedValues) expect(url.toString()).not.toContain(v);
+}
+
+test.describe('planner screens', () => {
+  test('Life-stage & Risk Planner: notice, hand-worked scores, private share link', async ({ page }) => {
+    await page.goto('/calculators/life-stage-planner');
+    await expect(page.getByTestId('mandatory-notice').first()).toContainText('Educational illustration only. This is not a suitability assessment');
+    // "steady household" fixture from tests/finance/lifeStage.test.ts: capacity 92, tolerance 72.
+    const set = async (label: string, v: string) => page.getByLabel(label, { exact: true }).fill(v);
+    await set('Current age', '30');
+    await set('Target retirement age', '60');
+    await set('Investment horizon (when you need this money)', '20');
+    await set('People who depend on household income', '1');
+    await set('Earning members', '2');
+    await set('Monthly household income (after tax)', '100000');
+    await set('Monthly essential expenses', '40000');
+    await set('Monthly loan EMIs', '10000');
+    await set('Emergency fund you hold, in months of expenses', '6');
+    await set('Your emergency-fund target', '6');
+    await expect(page.getByLabel('Risk capacity (your situation)')).toContainText('92 / 100');
+    await expect(page.getByLabel('Risk tolerance (your answers)')).toContainText('72 / 100');
+    await expect(page.getByTestId('profile')).toContainText('Set by: tolerance');
+    await expect(page.getByTestId('range-equity')).toContainText(/\d+–\d+%/);
+    expectNoSensitive(await sharedUrl(page), ['100000', '40000', '10000']);
+  });
+
+  test('Life-stage stress test uses a chosen scheme, and refuses IDCW', async ({ page }) => {
+    await mockFundApi(page);
+    await page.goto('/calculators/life-stage-planner');
+    const search = page.getByLabel('Find an equity scheme for the stress test');
+    await search.fill('fixture');
+    await page.getByRole('button', { name: 'Search', exact: true }).click();
+    await page.getByRole('button', { name: /TEST FIXTURE Synthetic Fund - Direct Plan - Growth/ }).click();
+    const stress = page.getByTestId('stress-result');
+    await expect(stress).toContainText('Largest observed fall');
+    await expect(stress.getByRole('heading', { name: 'Data source', exact: true })).toBeVisible();
+    await expect(stress.getByText('Upper end of equity range')).toBeVisible();
+    await stress.getByRole('button', { name: 'Choose another scheme' }).first().click();
+    await page.getByLabel('Find an equity scheme for the stress test').fill('fixture');
+    await page.getByRole('button', { name: 'Search', exact: true }).click();
+    await page.getByRole('button', { name: new RegExp(`Scheme code ${IDCW_FIXTURE_CODE}`) }).click();
+    await expect(page.getByText('This scheme cannot be used for the stress test')).toBeVisible();
+  });
+
+  test('PFRDA comparison shows its source and extension label', async ({ page }) => {
+    await page.goto('/calculators/life-stage-planner');
+    await page.getByLabel(/PFRDA NPS Auto Choice/).check();
+    const src = page.getByTestId('pfrda-source');
+    await expect(src.getByRole('link')).toHaveAttribute('href', /pfrda\.org\.in/);
+    await expect(src).toContainText("Values after age 55 are Lakshya's extension");
+  });
+
+  test('cash-flow planner shows a shortfall and keeps finances out of links', async ({ page }) => {
+    await page.goto('/calculators/cash-flow');
+    await page.getByLabel('Discretionary expenses', { exact: true }).fill('60000');
+    await expect(page.getByTestId('kpi-surplus')).toContainText('Monthly shortfall');
+    expectNoSensitive(await sharedUrl(page), ['60000', '100000']);
+  });
+
+  test('retirement planner shows the engine error for retirement age not after current age', async ({ page }) => {
+    await page.goto('/calculators/retirement-planner');
+    await expect(page.getByTestId('kpi-corpus')).toBeVisible();
+    await page.getByLabel('Retirement age', { exact: true }).fill('30');
+    await expect(page.getByRole('alert').filter({ hasText: 'Retirement age must be greater than current age' })).toBeVisible();
+    expectNoSensitive(await sharedUrl(page), ['60000']);
+  });
+
+  test('allocation explorer always shows its notice', async ({ page }) => {
+    await page.goto('/calculators/allocation-explorer');
+    await expect(page.getByTestId('mandatory-notice')).toContainText('Educational illustration of an editable rule of thumb');
+    await expect(page.getByTestId('kpi-equity')).toBeVisible();
+    await page.getByLabel('Age', { exact: true }).fill('17');
+    await expect(page.getByTestId('mandatory-notice')).toBeVisible();
+    await expect(page.getByRole('alert').filter({ hasText: 'No result for these inputs' })).toBeVisible();
+  });
+
+  test('scenario lab compares through the engine and exports', async ({ page }) => {
+    await page.goto('/scenario-lab');
+    await expect(page.getByTestId('result-summary')).toContainText('Highest projected value');
+    const [csv] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'CSV' }).click()]);
+    expect(csv.suggestedFilename()).toMatch(/^lakshya-scenario-lab-/);
   });
 });

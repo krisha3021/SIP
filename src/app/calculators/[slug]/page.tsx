@@ -7,6 +7,10 @@ import { GoalPlanner } from '@/features/calculators/ui/GoalPlanner';
 import { SwpCalculator } from '@/features/calculators/ui/SwpCalculator';
 import { MonteCarlo } from '@/features/calculators/ui/MonteCarlo';
 import { IncomeTaxCalculator } from '@/features/calculators/ui/IncomeTaxCalculator';
+import { LifeStagePlanner } from '@/features/planner/ui/LifeStagePlanner';
+import { CashFlowPlanner } from '@/features/calculators/ui/CashFlowPlanner';
+import { RetirementPlanner } from '@/features/calculators/ui/RetirementPlanner';
+import { AllocationExplorer } from '@/features/calculators/ui/AllocationExplorer';
 import type { SearchParamsRecord } from '@/features/calculators/ui/useFields';
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<SearchParamsRecord> };
@@ -36,6 +40,14 @@ function render(slug: CalculatorSlug, sp: SearchParamsRecord) {
       return <MonteCarlo params={sp} />;
     case 'income-tax':
       return <IncomeTaxCalculator params={sp} />;
+    case 'life-stage-planner':
+      return <LifeStagePlanner params={sp} />;
+    case 'cash-flow':
+      return <CashFlowPlanner params={sp} />;
+    case 'retirement-planner':
+      return <RetirementPlanner params={sp} />;
+    case 'allocation-explorer':
+      return <AllocationExplorer params={sp} />;
   }
 }
 

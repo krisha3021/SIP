@@ -117,6 +117,22 @@ export function SiteHeader() {
                       <span className="block font-medium">{item.label}</span>
                       <span className="block text-sm text-muted">{item.description}</span>
                     </Link>
+                    {item.children && (
+                      <ul className="mt-1 ml-3 space-y-1 border-l border-line pl-2">
+                        {item.children.map((c) => (
+                          <li key={c.href}>
+                            <Link
+                              href={c.href}
+                              onClick={closeDrawer}
+                              aria-current={pathname === c.href ? 'page' : undefined}
+                              className={`block rounded-md px-3 py-2 text-sm no-underline ${pathname === c.href ? 'bg-brand-soft text-brand-strong' : 'text-text hover:bg-surface-2'}`}
+                            >
+                              {c.label}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </li>
                 );
               })}
