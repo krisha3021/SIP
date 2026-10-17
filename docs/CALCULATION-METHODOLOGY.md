@@ -245,8 +245,12 @@ is synthetic, the report says "Synthetic simulation".
   year: (1) check slabs, rebate, standard deduction and limits against the primary text (the Finance Act and the
   Income Tax Department pages); (2) record the sources and who checked them, and when, in `verification`;
   (3) get owner review; (4) add tests with hand-computed liabilities at the slab boundaries.
-  **FY 2025-26** is verified (2026-10-17). **FY 2026-27** is `unverified` and stays disabled until the Finance Act
-  2026 text has been checked. Owner decision pending.
+  **FY 2025-26** is verified (2026-10-17). **FY 2026-27** was checked against the primary texts on 2026-10-17: the
+  Finance Act, 2026 (No. 4 of 2026; eGazette) and the Income-tax Act, 2025 as amended by it. The references are
+  s.202(1) slabs, s.156 rebate, s.19(1) standard deduction, ss.123, 124(3) and 126 limits, First Schedule Part I-B
+  Paragraphs A and F, and s.3(15) cess. All values are unchanged from FY 2025-26. The year carries
+  `pendingOwnerApproval: true` and stays `unverified` (disabled). **Owner action:** review `verificationEvidence` in
+  `tax/config.ts`, then set `status: 'verified'` and `pendingOwnerApproval: false`.
 
 ## 16. Report payloads (`src/lib/export/reportBuilders.ts`, added in 0.2.0)
 
