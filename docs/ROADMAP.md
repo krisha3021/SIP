@@ -11,10 +11,12 @@
 | 7 | Capital-gains estimator (engine, then screen) | Agent 2, then Agent 1 | In progress |
 
 ## Owner decisions still needed
+Step-by-step instructions for each: [docs/owner-actions/README.md](owner-actions/README.md).
+
 - **FY 2026-27 tax rules:** verify against the Finance Act 2026 text and review before the year is enabled (it stays disabled until then).
 - **MFAPI terms:** confirm commercial use, caching and export redistribution with the maintainer.
 - **Approved scheme list** for the daily data-quality task (`src/lib/automation/tasks/approved-schemes.json`, currently PPFAS Flexi Cap Direct/Regular Growth).
-- **Legal and contact content:** About, Contact, Privacy, Terms and Disclaimer pages still show "Owner to supply before launch".
+- **Legal and contact content:** Privacy, Terms and Disclaimer drafts are ready (docs/owner-actions/legal-drafts.md) with placeholders; About and Contact still need content.
 - **Storage service for automation runs** and last-known-good NAVs (the in-memory store loses everything on a cold start; a paid service needs approval).
 - **`CRON_SECRET` in Vercel:** set a value of at least 32 random characters for Production; until then the cron route refuses every request (401).
 
