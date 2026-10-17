@@ -400,3 +400,14 @@ test.describe('final coverage', () => {
     await expect(page.getByTestId('stress-asset-changes')).not.toContainText('assumed unchanged');
   });
 });
+
+test.describe('legal drafts', () => {
+  for (const path of ['/privacy', '/terms', '/disclaimer']) {
+    test(`${path} shows the draft banner and owner placeholders, never invented details`, async ({ page }) => {
+      await page.goto(path);
+      await expect(page.getByTestId('legal-draft-banner')).toContainText('Draft — owner to complete and have reviewed before launch');
+      expect(await page.getByTestId('owner-placeholder').count()).toBeGreaterThan(0);
+      await expect(page.locator('main')).not.toContainText('@');
+    });
+  }
+});
