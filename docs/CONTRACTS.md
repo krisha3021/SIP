@@ -75,6 +75,35 @@ real value: render the fields the engine returns.
 - [ ] API route response envelopes for `/api/funds/*`. Agent 1 owns the routes. Proposal: return
       `NavServiceResult` (state + source + error + freshness) as-is, mapping `error.code` through
       `DATA_ERROR_HTTP_STATUS` only when there is no data at all.
+      Agent 1's current envelopes (Phase 2) are typed in `src/features/funds/ui/api.ts`:
+      `{ ok: true, meta, navs?, provenance, freshness, lastError, servedFrom, droppedRows }` or `{ ok: false, error: { code, message } }`.
+      To agree: reconcile these with `NavServiceResult` during integration.
 - [ ] Cron route for `validate-mf-data` (Agent 1). See docs/DATA-SOURCES.md §"How Agent 1 invokes it".
 - [ ] Dependency proposal (Agent 1 to decide): add `server-only` so that importing `@/contracts/server` from a
       client component fails the build.
+
+### Requests from Agent 1 (raised 2026-10-17, Phase 2, against 0.1.0)
+Status notes in *italics* were added when the branches were merged (2026-10-17). They record what 0.2.0 already provides.
+- [ ] **Export `reportToCsv` and `reportToXlsx` from `@/contracts`** (minor, additive). Rule 7 names them, but only the
+      `Report` type is exported. Interim: `src/components/calculator/ActionButtons.tsx` lazy-imports them from
+      `@/lib/export/report`. Switch to `@/contracts` once exported.
+      *Still open in 0.2.0: `reportToCsv` and `reportToXlsx` are not exported from `@/contracts`.*
+- [ ] **Export the MFAPI adapter surface server-side** (`fetchNavHistory`, `searchSchemes`, `schemeCodeSchema`,
+      `searchQuerySchema`, `UpstreamError`, `PROVIDER_NAME`, `SchemeMeta`) — perhaps from a server-only
+      `@/contracts/server` entry so client bundles never include it. Interim: only `src/app/api/_lib/navService.ts` and
+      `src/app/api/funds/search/route.ts` import `@/lib/data/mfapi`.
+      *0.2.0 adds `@/contracts/server` with `createNavService` (cache, dedupe, last-known-good) and the `SchemeMeta`
+      type. The raw adapter functions are not exported. Integration: replace `src/app/api/_lib/navService.ts` with
+      `createNavService` rather than keep two implementations.*
+- [ ] **Report builders per calculator** (Agent 2 owns payload content). Interim: `src/features/calculators/ui/reports.ts`
+      maps engine output fields one-to-one into `Report` (no arithmetic). Replace with Agent 2 builders when available.
+      *Provided in 0.2.0: `build*Report` builders for all 12 calculators are exported from `@/contracts`.*
+- [ ] **Monte Carlo worker hooks.** The worker hosts `runMonteCarlo` unchanged; cancellation is by terminating the worker.
+      Progress callbacks would let the UI show a progress bar for 10,000-path runs.
+      *Provided in 0.2.0: `runMonteCarloChunked` / `createMonteCarloSession` with `onProgress` and `signal`.*
+- [ ] **Tax: expose `cessRate` on `IncomeTaxComparison.config`**, so the UI can label the cess line with the configured
+      rate instead of a generic "Health & education cess".
+      *Still open in 0.2.0.*
+- [ ] **Months↔years in UI.** Calculators take whole years and pass `months = years × 12` to the engines (input unit
+      mapping only). If Agent 2 prefers a `years` input on engines, say so.
+      *Still open: Agent 2 to answer.*
