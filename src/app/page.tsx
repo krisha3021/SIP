@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, Calculator, LineChart, Search, ShieldCheck, Target, FlaskConical } from 'lucide-react';
+import { ArrowRight, Calculator, LineChart, Search, ShieldCheck, Target, FlaskConical, Scale, Star, Lock, Layers } from 'lucide-react';
 import { ButtonLink } from '@/components/ui/primitives';
 
 const ENTRY_POINTS = [
@@ -8,6 +8,10 @@ const ENTRY_POINTS = [
   { href: '/calculators/monte-carlo', icon: FlaskConical, title: 'Explore uncertainty', text: 'See a range of outcomes from a simple, reproducible random-return model.' },
   { href: '/funds', icon: Search, title: 'Research a fund', text: 'Search schemes and read the NAV history the provider publishes, with its dates.' },
   { href: '/historical', icon: LineChart, title: 'Backtest a SIP', text: 'Replay a SIP on observed NAVs, with each allotment date and skipped instalment.' },
+  { href: '/strategy-lab', icon: Layers, title: 'Strategy Lab', text: 'Compare SIP, step-up, lump sum and allocation mixes on your own assumptions, with downside ranges.' },
+  { href: '/compare', icon: Scale, title: 'Compare funds', text: 'Up to four schemes on the same rows, with warnings when they are not comparable.' },
+  { href: '/watchlist', icon: Star, title: 'Watchlist', text: 'Follow schemes in this browser — no account needed.' },
+  { href: '/privacy-permissions', icon: Lock, title: 'Privacy & Permissions', text: 'What stays on this device, and how any external action asks first.' },
   { href: '/methodology', icon: ShieldCheck, title: 'How we calculate', text: 'Formulas, conventions, data sources and known limits, in one place.' },
 ];
 
@@ -37,7 +41,9 @@ export default function HomePage() {
               <li>• Results are labelled “Projection (assumption-based)”.</li>
               <li>• No live-market ticker: we have no licensed quote feed, so we show none.</li>
               <li>• Fund data shows provider, scheme code and observation date. Missing fields say “Not available”.</li>
-              <li>• Saved plans stay in your browser.</li>
+              <li>• Saved plans and your watchlist stay in your browser.</li>
+              <li>• The header clock is your device’s time in IST; each dataset shows its own dates.</li>
+              <li>• Nothing personal leaves this device unless you approve a specific action first.</li>
             </ul>
             <p className="mt-4 text-muted">Educational use only. Not investment advice. Lakshya is not a SEBI-registered investment adviser or research analyst.</p>
           </div>

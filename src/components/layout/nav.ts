@@ -8,23 +8,42 @@ export interface NavItem {
 
 /** Primary navigation. Order matters: it is the order in the header, drawer and home page. */
 export const PRIMARY_NAV: NavItem[] = [
-  { href: '/calculators', label: 'Calculators', description: 'SIP, goals, retirement, cash flow, allocation, Monte Carlo and tax' },
+  { href: '/', label: 'Dashboard', description: 'Start here' },
   {
-    href: '/goals',
-    label: 'Goals & Retirement',
-    description: 'Life-stage & Risk Planner, goals, retirement and withdrawals',
+    href: '/calculators',
+    label: 'SIP & Goals',
+    description: 'SIP, goals, retirement, cash flow, allocation, Monte Carlo and tax calculators',
     children: [
+      { href: '/calculators', label: 'All calculators' },
+      { href: '/goals', label: 'Goals & Retirement' },
       { href: '/calculators/life-stage-planner', label: 'Life-stage & Risk Planner' },
-      { href: '/calculators/retirement-planner', label: 'Retirement planner' },
-      { href: '/calculators/goal-planner', label: 'Goal planner' },
+      { href: '/scenario-lab', label: 'Scenario Lab' },
+      { href: '/saved', label: 'Saved Plans' },
     ],
   },
-  { href: '/funds', label: 'Fund Research', description: 'Search schemes and read their published NAV history' },
-  { href: '/historical', label: 'Historical Analysis', description: 'Backtest a SIP on observed NAVs' },
-  { href: '/scenario-lab', label: 'Scenario Lab', description: 'Compare up to three sets of assumptions' },
-  { href: '/saved', label: 'Saved Plans', description: 'Plans saved in this browser only' },
-  { href: '/learn', label: 'Learn', description: 'Short explainers on the conventions we use' },
-  { href: '/methodology', label: 'Methodology', description: 'How every number is calculated, and where data comes from' },
+  { href: '/strategy-lab', label: 'Strategy Lab', description: 'Compare contribution patterns and allocation mixes on your own assumptions' },
+  {
+    href: '/funds',
+    label: 'Fund Research',
+    description: 'Search schemes, read NAV history and provenanced research fields',
+    children: [
+      { href: '/funds', label: 'Search schemes' },
+      { href: '/historical', label: 'Historical Analysis (SIP backtest)' },
+    ],
+  },
+  { href: '/compare', label: 'Compare Funds', description: 'Up to four schemes on the same rows, with comparability warnings' },
+  { href: '/watchlist', label: 'Watchlist', description: 'Schemes you follow, saved in this browser only' },
+  {
+    href: '/methodology',
+    label: 'Sources & Methodology',
+    description: 'How every number is calculated, and where the data comes from',
+    children: [
+      { href: '/methodology', label: 'Methodology' },
+      { href: '/data-sources', label: 'Data Sources' },
+      { href: '/learn', label: 'Learn' },
+    ],
+  },
+  { href: '/privacy-permissions', label: 'Privacy & Permissions', description: 'What stays on this device and how each permission is asked for' },
 ];
 
 export const FOOTER_NAV: NavItem[] = [

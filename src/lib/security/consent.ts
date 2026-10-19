@@ -20,15 +20,8 @@ export { CONSENT_ACTIONS, type ConsentActionId, type ConsentActionDef, type Perm
 export const CONSENT_TTL_MS = 5 * 60_000;
 export const MIN_SECRET_LENGTH = 32;
 
-/** Stable JSON: object keys sorted recursively, so the same payload always hashes the same. */
-export function canonicalJson(value: unknown): string {
-  if (value === null || typeof value !== 'object') return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
-  const entries = Object.entries(value as Record<string, unknown>)
-    .filter(([, v]) => v !== undefined)
-    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-  return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonicalJson(v)}`).join(',')}}`;
-}
+import { canonicalJson } from './canonical';
+export { canonicalJson };
 
 export const payloadHash = (payload: unknown): string => createHash('sha256').update(canonicalJson(payload)).digest('hex');
 

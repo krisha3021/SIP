@@ -107,12 +107,14 @@ test.describe('navigation', () => {
       await expect(page.getByRole('dialog', { name: 'Site menu' })).toBeHidden();
     } else {
       const nav = page.getByRole('navigation', { name: 'Primary' });
-      for (const label of ['Calculators', 'Goals & Retirement', 'Fund Research', 'Historical Analysis', 'Scenario Lab', 'Saved Plans', 'Learn', 'Methodology']) {
+      for (const label of ['Dashboard', 'SIP & Goals', 'Strategy Lab', 'Fund Research', 'Compare Funds', 'Watchlist', 'Sources & Methodology', 'Privacy & Permissions']) {
         await expect(nav.getByRole('link', { name: label })).toBeVisible();
       }
-      await nav.getByRole('link', { name: 'Calculators' }).click();
+      // Eight items plus the clock must fit without sideways scrolling.
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      await nav.getByRole('link', { name: 'SIP & Goals' }).click();
       await expect(page).toHaveURL(/\/calculators$/);
-      await expect(nav.getByRole('link', { name: 'Calculators' })).toHaveAttribute('aria-current', 'page');
+      await expect(nav.getByRole('link', { name: 'SIP & Goals' })).toHaveAttribute('aria-current', 'page');
     }
   });
 
@@ -500,5 +502,34 @@ test.describe('permission dialog (real browser)', () => {
     await expect(page.getByRole('link', { name: 'Keep me' })).toHaveCount(0);
     await page.goto('/privacy-permissions');
     await expect(page.getByText(/delete-saved-plan → this browser: approved/)).toBeVisible();
+  });
+});
+
+test.describe('Strategy Lab AI explanation', () => {
+  test('is honestly unavailable when no AI provider is configured', async ({ page }) => {
+    await page.goto('/strategy-lab');
+    await expect(page.getByText(/not configured on this deployment/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Explain with AI' })).toBeDisabled();
+  });
+
+  test('asks with full disclosure and Cancel focused before anything is sent (mocked enabled provider)', async ({ page }) => {
+    const posted: string[] = [];
+    await page.route('**/api/ai/explain', (route) => {
+      if (route.request().method() === 'POST') posted.push('explain');
+      return route.fulfill({ json: { enabled: true, provider: 'Mock free LLM', retentionNote: null, termsUrl: 'https://llm.example/terms', disclosureVersion: 'ai-explain-v1', cost: 'No charge to you.' } });
+    });
+    await page.route('**/api/consent', (route) => {
+      posted.push('consent');
+      return route.fulfill({ status: 503, json: { ok: false, error: { code: 'CONSENT_UNAVAILABLE', message: 'Consent signing is not configured.' } } });
+    });
+    await page.goto('/strategy-lab');
+    await page.getByRole('button', { name: 'Explain with AI' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Approve this action?' });
+    await expect(dialog.getByText('Mock free LLM')).toBeVisible();
+    await expect(dialog.getByText(/has not recorded this provider’s retention terms/)).toBeVisible();
+    await expect(dialog.getByText('This action communicates with an external service.')).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused();
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    expect(posted).toEqual([]);
   });
 });
