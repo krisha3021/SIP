@@ -45,3 +45,22 @@ export interface ResearchDeps {
   timeoutMs?: number;
   retries?: number;
 }
+
+/** Display labels for research fields (shared by server profile and client UI). */
+export const RESEARCH_FIELD_LABELS: Record<ResearchFieldKey, string> = {
+  ter: 'Total expense ratio',
+  aaum: 'Scheme average AUM',
+  exitLoad: 'Exit load',
+  minInvestment: 'Minimum investment',
+  minSip: 'Minimum SIP',
+  riskometer: 'Riskometer',
+  benchmark: 'Benchmark',
+  inceptionDate: 'Inception date',
+  fundManagers: 'Fund managers',
+  managerTenure: 'Manager tenure',
+  holdings: 'Portfolio holdings',
+  sectorAllocation: 'Sector allocation',
+  assetAllocation: 'Asset allocation',
+  portfolioDisclosureDate: 'Portfolio disclosure date',
+  rating: 'Third-party rating',
+};

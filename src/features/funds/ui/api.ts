@@ -1,5 +1,5 @@
 /** Typed client for Lakshya's own /api/funds routes. The browser never calls the provider directly. */
-import type { DatasetTimestamps, FreshnessState, NavPoint, Provenance, SchemeNavHistory } from '@/contracts';
+import type { DatasetTimestamps, FreshnessState, FundProfile, NavPoint, Provenance, SchemeNavHistory } from '@/contracts';
 
 export interface SchemeMetaDto {
   schemeCode: number;
@@ -54,6 +54,8 @@ async function getJson<T>(url: string, signal?: AbortSignal): Promise<T | ApiFai
 }
 
 export const searchFunds = (q: string, signal?: AbortSignal) => getJson<SearchResponse>(`/api/funds/search?q=${encodeURIComponent(q)}`, signal);
+export type ProfileResponse = { ok: true } & FundProfile;
+export const fetchProfile = (code: number | string, signal?: AbortSignal) => getJson<ProfileResponse>(`/api/funds/${encodeURIComponent(String(code))}/profile`, signal);
 export const fetchNav = (code: number | string, signal?: AbortSignal) => getJson<NavResponse>(`/api/funds/${encodeURIComponent(String(code))}/nav`, signal);
 
 /** Display labels for freshness states (docs/CONTRACTS.md rule 6). */

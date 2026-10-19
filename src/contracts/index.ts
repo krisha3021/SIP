@@ -170,7 +170,7 @@ export type { ProvenancedField, FieldStatus, FieldScope, FieldUnit, UsageStatus,
 export type { SchemeIdentity } from '@/lib/data/identity';
 export { datasetTimestamps } from '@/lib/data/provenance';
 export type { DatasetTimestamps } from '@/lib/data/provenance';
-export { RESEARCH_FIELD_KEYS } from '@/lib/data/research/types';
+export { RESEARCH_FIELD_KEYS, RESEARCH_FIELD_LABELS } from '@/lib/data/research/types';
 export type { ResearchFieldKey, ProviderStatus, ProviderState } from '@/lib/data/research/types';
 export type { FundProfile } from '@/lib/data/research/profile';
 export { performanceMetrics } from '@/lib/finance/performance';

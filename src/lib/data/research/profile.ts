@@ -5,9 +5,9 @@
 import { unavailableField, type FieldContext, type FieldUnit, type FieldScope, type ProvenancedField } from '../fields';
 import type { SchemeIdentity } from '../identity';
 import { createAmfiResearchProvider } from './amfi';
-import { RESEARCH_FIELD_KEYS, type ProviderStatus, type ResearchDeps, type ResearchFieldKey } from './types';
+import { RESEARCH_FIELD_KEYS, RESEARCH_FIELD_LABELS, type ProviderStatus, type ResearchDeps, type ResearchFieldKey } from './types';
 
-export { RESEARCH_FIELD_KEYS };
+export { RESEARCH_FIELD_KEYS, RESEARCH_FIELD_LABELS };
 
 const AMFI_PORTFOLIO_URL = 'https://www.amfiindia.com/online-center/portfolio-disclosure';
 
@@ -28,9 +28,6 @@ const FIELD_META: Record<ResearchFieldKey, { unit: FieldUnit; scope: FieldScope;
   portfolioDisclosureDate: { unit: 'date', scope: 'portfolio-disclosure', label: 'Portfolio disclosure date' },
   rating: { unit: 'rating', scope: 'plan', label: 'Third-party rating' },
 };
-export const RESEARCH_FIELD_LABELS: Record<ResearchFieldKey, string> = Object.fromEntries(
-  Object.entries(FIELD_META).map(([k, v]) => [k, v.label]),
-) as Record<ResearchFieldKey, string>;
 
 const DOCUMENT_FIELDS: ResearchFieldKey[] = ['exitLoad', 'minInvestment', 'minSip', 'riskometer', 'benchmark', 'inceptionDate', 'fundManagers', 'managerTenure'];
 const PORTFOLIO_FIELDS: ResearchFieldKey[] = ['holdings', 'sectorAllocation', 'assetAllocation', 'portfolioDisclosureDate'];

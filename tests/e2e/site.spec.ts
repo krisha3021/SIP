@@ -204,7 +204,11 @@ test.describe('fund research (mocked API, synthetic fixture)', () => {
     const source = page.getByRole('region', { name: 'Data source' });
     await expect(source.locator('dt', { hasText: 'Freshness status' }).locator('xpath=following-sibling::dd[1]')).toHaveText('Synthetic simulation');
     await expect(source.locator('dt', { hasText: 'Last attempted refresh' })).toBeVisible();
-    await expect(page.getByText('Expense ratio (TER)')).toBeVisible();
+    const research = page.getByRole('region', { name: 'Research data' });
+    await expect(research.getByText('Total expense ratio')).toBeVisible();
+    await expect(research.getByText('Not available — awaiting data permission').first()).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Third-party rating' }).getByText('Rating unavailable')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Historical performance (observed NAV)' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Rolling returns' })).toBeVisible();
   });
 

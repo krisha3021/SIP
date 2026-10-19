@@ -10,7 +10,10 @@ import { Tabs } from '@/components/ui/Tabs';
 import { DataTable } from '@/components/ui/DataTable';
 import { formatIndianNumber, formatPct } from '@/lib/format/inr';
 import { formatCount, formatShare } from '@/features/calculators/ui/format';
-import { fetchNav, toHistory, type ApiFailure, type NavResponse } from './api';
+import { fetchNav, fetchProfile, toHistory, type ApiFailure, type NavResponse, type ProfileResponse } from './api';
+import { ResearchFieldList } from './FieldRow';
+import { RatingDisplay } from './RatingDisplay';
+import { PerformanceSection } from './PerformanceSection';
 import { ProvenancePanel } from './ProvenancePanel';
 import { NavChart, RollingChart } from './NavChart';
 
@@ -32,10 +35,25 @@ export function useNav(code: string | number | null): NavState {
   return settled && settled.code === String(code) ? settled.state : { status: 'loading' };
 }
 
-const NOT_AVAILABLE_FIELDS = ['Assets under management (AUM)', 'Expense ratio (TER)', 'Portfolio holdings', 'Third-party ratings', 'Fund manager'];
+type ProfileState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; profile: ProfileResponse };
+
+export function useProfile(code: string): ProfileState {
+  const [settled, setSettled] = useState<{ code: string; state: ProfileState } | null>(null);
+  useEffect(() => {
+    const c = new AbortController();
+    fetchProfile(code, c.signal)
+      .then((r) => setSettled({ code, state: r.ok ? { status: 'ready', profile: r } : { status: 'error', message: r.error.message } }))
+      .catch(() => {
+        /* aborted */
+      });
+    return () => c.abort();
+  }, [code]);
+  return settled && settled.code === code ? settled.state : { status: 'loading' };
+}
 
 export function FundDetail({ schemeCode }: { schemeCode: string }) {
   const state = useNav(schemeCode);
+  const profile = useProfile(schemeCode);
 
   if (state.status === 'loading') {
     return (
@@ -113,24 +131,84 @@ export function FundDetail({ schemeCode }: { schemeCode: string }) {
         />
       </section>
       <RollingSection data={d} />
-      <section aria-labelledby="na-heading" className="rounded-xl border border-line bg-surface p-4">
-        <h2 id="na-heading" className="font-sans text-base font-semibold">
-          Not available from our data source
-        </h2>
-        <dl className="mt-2 grid gap-1 text-sm sm:grid-cols-[16rem_1fr]">
-          {NOT_AVAILABLE_FIELDS.map((f) => (
-            <div key={f} className="contents">
-              <dt className="text-muted">{f}</dt>
-              <dd>Not available</dd>
-            </div>
-          ))}
-        </dl>
-        <p className="mt-2 text-xs text-muted">We show only what the configured provider publishes. Check the scheme information document and factsheet on the AMC’s website.</p>
-      </section>
+      <ResearchSections profile={profile} firstNavDate={d.navs[0]?.date ?? null} />
+      <PerformanceSection navs={d.navs} />
       <Link href={`/historical?scheme=${d.meta.schemeCode}`} className={buttonClass('primary')}>
         Backtest a SIP in this scheme
       </Link>
     </div>
+  );
+}
+
+function ResearchSections({ profile, firstNavDate }: { profile: ProfileState; firstNavDate: string | null }) {
+  if (profile.status === 'loading') return <p role="status" className="text-sm text-muted">Loading research fields…</p>;
+  if (profile.status === 'error') {
+    return (
+      <Notice tone="warning" title="Research fields could not be loaded">
+        {profile.message} The NAV history above is unaffected.
+      </Notice>
+    );
+  }
+  const { identity: id, fields, providers, officialLinks } = profile.profile;
+  const identityRows: Array<[string, string]> = [
+    ['Scheme name', id.schemeName],
+    ['AMC', id.amc ?? 'Not available'],
+    ['AMFI scheme code', String(id.schemeId)],
+    ['ISIN', id.isin ?? (id.isinStatus === 'invalid' ? 'Not shown (failed ISIN check)' : 'Not available')],
+    ['Asset class', id.assetClass ?? 'Not available'],
+    ['Category', id.subcategory ?? 'Not available'],
+    ['Plan', id.planType === 'Unknown' ? 'Not stated' : id.planType],
+    ['Option', id.optionType === 'Unknown' ? 'Not stated' : id.optionType],
+    ['First NAV in this dataset', firstNavDate ?? 'Not available'],
+  ];
+  const { rating, ...research } = fields;
+  return (
+    <>
+      <section aria-labelledby="identity-heading" className="space-y-2 rounded-xl border border-line bg-surface p-4">
+        <h2 id="identity-heading" className="font-sans text-base font-semibold">
+          Identity
+        </h2>
+        <dl className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[14rem_1fr]">
+          {identityRows.map(([k, v]) => (
+            <div key={k} className="contents">
+              <dt className="text-muted">{k}</dt>
+              <dd className="break-words">{v}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="text-xs text-muted">The first NAV in this dataset is not necessarily the scheme’s inception date; see “Inception date” below.</p>
+      </section>
+      <section aria-labelledby="research-heading" className="space-y-3 rounded-xl border border-line bg-surface p-4">
+        <h2 id="research-heading" className="font-sans text-base font-semibold">
+          Research data
+        </h2>
+        <ResearchFieldList fields={research} />
+        <ul className="list-disc space-y-1 pl-5 text-xs text-muted">
+          {providers.map((p) => (
+            <li key={p.id}>
+              <span className="font-medium text-text">{p.name}:</span> {p.reason}
+            </li>
+          ))}
+        </ul>
+        <p className="text-xs">
+          Official sources:{' '}
+          {officialLinks.map((l, i) => (
+            <span key={l.url}>
+              {i > 0 && ' · '}
+              <a href={l.url} target="_blank" rel="noopener noreferrer">
+                {l.label}
+              </a>
+            </span>
+          ))}
+        </p>
+      </section>
+      <section aria-labelledby="rating-heading" className="space-y-2 rounded-xl border border-line bg-surface p-4">
+        <h2 id="rating-heading" className="font-sans text-base font-semibold">
+          Third-party rating
+        </h2>
+        <RatingDisplay field={rating} />
+      </section>
+    </>
   );
 }
 

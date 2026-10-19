@@ -68,7 +68,26 @@ export const IDCW_NAV_RESPONSE = {
   provenance: { ...NAV_RESPONSE.provenance, identifier: `Fixture ${IDCW_FIXTURE_CODE}`, option: 'IDCW' },
 };
 
+const KEYS = ['ter','aaum','exitLoad','minInvestment','minSip','riskometer','benchmark','inceptionDate','fundManagers','managerTenure','holdings','sectorAllocation','assetAllocation','portfolioDisclosureDate','rating'];
+const unavailable = (key: string) => ({
+  value: null, unit: key === 'ter' ? 'percent' : key === 'aaum' ? 'inr-crore' : 'text', scheme_id: FIXTURE_CODE,
+  plan_type: 'Direct', option_type: 'Growth', scope: 'plan', provider: 'None configured', source_url: null, observation_date: null,
+  published_at: null, retrieved_at: null, license_or_usage_status: key === 'rating' ? 'unlicensed' : 'awaiting-permission',
+  freshness_status: 'unavailable', validation_status: 'unvalidated',
+  status: key === 'ter' || key === 'aaum' ? 'blocked-licensing' : 'not-configured',
+  reason: key === 'ter' || key === 'aaum' ? 'Awaiting AMFI written permission (synthetic e2e fixture).' : 'No configured source (synthetic e2e fixture).',
+});
+/** Synthetic profile fixture: identity plus every research field unavailable — mirrors the deployed state. */
+export const PROFILE_RESPONSE = {
+  ok: true,
+  identity: { schemeId: FIXTURE_CODE, schemeName: NAV_RESPONSE.meta.schemeName, amc: NAV_RESPONSE.meta.fundHouse, assetClass: 'Equity', subcategory: 'Flexi Cap Fund', schemeType: 'Open Ended Schemes', planType: 'Direct', optionType: 'Growth', isin: null, isinStatus: 'missing' },
+  fields: Object.fromEntries(KEYS.map((k) => [k, unavailable(k)])),
+  providers: [{ id: 'amfi', name: 'AMFI (TER and scheme average AUM)', state: 'disabled-awaiting-permission', reason: 'Awaiting AMFI written permission (fixture).', requiredConfig: [], fields: ['ter', 'aaum'] }],
+  officialLinks: [{ label: 'AMFI portfolio disclosure (links to each AMC)', url: 'https://www.amfiindia.com/online-center/portfolio-disclosure' }],
+};
+
 export async function mockFundApi(page: Page) {
+  await page.route('**/api/funds/*/profile', (route) => route.fulfill({ json: { ...PROFILE_RESPONSE, identity: { ...PROFILE_RESPONSE.identity, schemeId: Number(route.request().url().split('/funds/')[1]!.split('/')[0]) } } }));
   await page.route('**/api/funds/search?**', (route) =>
     route.fulfill({
       json: {
