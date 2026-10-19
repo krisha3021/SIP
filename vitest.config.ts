@@ -13,7 +13,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['tests/finance/**/*.test.ts', 'tests/data/**/*.test.ts', 'tests/components/**/*.test.tsx', 'tests/api/**/*.test.ts'],
+    include: ['tests/finance/**/*.test.ts', 'tests/data/**/*.test.ts', 'tests/components/**/*.test.tsx', 'tests/api/**/*.test.ts', 'tests/security/**/*.test.ts'],
     setupFiles: ['./tests/setup.ts'],
   },
 });
