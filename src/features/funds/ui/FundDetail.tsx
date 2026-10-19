@@ -14,6 +14,7 @@ import { fetchNav, fetchProfile, toHistory, type ApiFailure, type NavResponse, t
 import { ResearchFieldList } from './FieldRow';
 import { RatingDisplay } from './RatingDisplay';
 import { PerformanceSection } from './PerformanceSection';
+import { WatchlistButton } from '@/features/watchlist/ui/WatchlistButton';
 import { ProvenancePanel } from './ProvenancePanel';
 import { NavChart, RollingChart } from './NavChart';
 
@@ -83,6 +84,10 @@ export function FundDetail({ schemeCode }: { schemeCode: string }) {
         <p className="mt-1 text-sm text-muted">
           {d.meta.fundHouse ?? 'Fund house not available'} · {d.meta.category ?? 'Category not available'}
         </p>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <WatchlistButton schemeCode={d.meta.schemeCode} schemeName={d.meta.schemeName} />
+          <Link href={`/compare?codes=${d.meta.schemeCode}`}>Compare with other funds</Link>
+        </div>
       </div>
       <KpiGrid>
         <KpiCard label={`NAV on ${latest?.date ?? '—'}`} value={latest ? `₹${formatIndianNumber(latest.nav, 4)}` : 'Not available'} emphasis sub="Latest observation from the provider" />

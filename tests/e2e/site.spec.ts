@@ -20,6 +20,7 @@ const CORE_ROUTES = [
   '/goals',
   '/funds',
   '/compare',
+  '/watchlist',
   '/historical',
   '/scenario-lab',
   '/saved',
@@ -445,5 +446,18 @@ test.describe('compare funds (mocked API, synthetic fixture)', () => {
     await expect(page.getByRole('heading', { name: 'Portfolio overlap' })).toBeVisible();
     const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
     expect(axe.violations).toEqual([]);
+  });
+});
+
+test.describe('watchlist (local only)', () => {
+  test('add from a fund page, see it on the watchlist, remove it', async ({ page }) => {
+    await mockFundApi(page);
+    await page.goto(`/funds/${FIXTURE_CODE}`);
+    await page.getByRole('button', { name: 'Add to watchlist' }).click();
+    await expect(page.getByRole('status').filter({ hasText: /Added. Your watchlist is saved in this browser only/ })).toBeVisible();
+    await page.goto('/watchlist');
+    await expect(page.getByRole('link', { name: /TEST FIXTURE/ })).toBeVisible();
+    await page.getByRole('button', { name: /Remove .* from the watchlist/ }).click();
+    await expect(page.getByText(/No schemes on your watchlist yet/)).toBeVisible();
   });
 });
