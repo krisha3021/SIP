@@ -31,3 +31,5 @@ export type { TaskLogger } from '@/lib/automation/tasks/logging';
 // ── 0.5.0: scheme identity normalisation (uses the MFAPI plan/option parser, so server-only) ──
 export { parseSchemeIdentity, isValidIsin } from '@/lib/data/identity';
 export { datasetTimestamps } from '@/lib/data/provenance';
+export { buildFundProfile } from '@/lib/data/research/profile';
+export { createAmfiResearchProvider, parseAmfiTerRows, parseAmfiAaumRows, AMFI_HOSTS } from '@/lib/data/research/amfi';

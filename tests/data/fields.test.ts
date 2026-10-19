@@ -94,6 +94,14 @@ describe('assertSamePlan', () => {
     const other = availableField(0.5, 'percent', { ...ctx, scheme_id: 999, scope: 'plan', observation_date: '2026-10-01' });
     expect(() => assertSamePlan(identity, other)).toThrow(/scheme/i);
   });
+  it('accepts scheme-wide AAUM (both plans combined, plan/option Unknown) on a Direct-Growth record', () => {
+    const aaum = availableField(150000, 'inr-crore', { ...ctx, plan_type: 'Unknown', option_type: 'Unknown', scope: 'scheme-aaum', observation_date: '2026-09-30' });
+    expect(assertSamePlan(identity, aaum, 'scheme-aaum')).toBe(aaum);
+  });
+  it('still rejects a plan-scoped field with Unknown plan', () => {
+    const unknownPlan = availableField(0.63, 'percent', { ...ctx, plan_type: 'Unknown', scope: 'plan', observation_date: '2026-10-01' });
+    expect(() => assertSamePlan(identity, unknownPlan)).toThrow(/plan/i);
+  });
   it('accepts a matching field', () => {
     const ok = availableField(0.63, 'percent', { ...ctx, scope: 'plan', observation_date: '2026-10-01' });
     expect(assertSamePlan(identity, ok)).toBe(ok);

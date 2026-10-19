@@ -39,6 +39,9 @@ real value: render the fields the engine returns.
 ### 0.5.0 — 2026-10-19 (research-platform upgrade, additive; branch `release/research-upgrade`)
 - `@/contracts`: `ProvenancedField` and its builders `availableField` / `unavailableField`, plus the `assertSamePlan` guard (scheme, plan, option, scope), and the `SchemeIdentity` type.
 - `@/contracts/server`: `parseSchemeIdentity` and `isValidIsin`.
+- `@/contracts`: `datasetTimestamps` / `DatasetTimestamps` (data as of, provider publication, last success, last attempt, freshness). The NAV envelope gains `timestamps`.
+- Research data: `RESEARCH_FIELD_KEYS`, `ResearchFieldKey`, `ProviderStatus` and `FundProfile` in `@/contracts`; `buildFundProfile` and the AMFI TER/AAUM adapter (gated off by `AMFI_REUSE_APPROVED` and owner-confirmed `AMFI_*_DATA_URL`s) in `@/contracts/server`. New route: `GET /api/funds/[code]/profile`.
+- `assertSamePlan` checks plan and option only for plan-scoped fields. Scheme-wide fields (`scheme`, `scheme-aaum`, `portfolio-disclosure`) may carry `Unknown` plan/option.
 
 ### 0.4.0 — 2026-10-17 (Agent 2, additive; branch `agent-2/capital-gains`)
 - Adds a capital-gains estimate for mutual-fund redemptions to `@/contracts`. It is separate from income tax.

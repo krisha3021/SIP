@@ -131,8 +131,16 @@ export function assertSamePlan<F extends ProvenancedField<unknown>>(
   expectedScope?: FieldScope,
 ): F {
   if (field.scheme_id !== identity.schemeId) throw new Error(`Field belongs to scheme ${field.scheme_id}, not ${identity.schemeId}`);
-  if (field.plan_type !== identity.planType) throw new Error(`Field is for the ${field.plan_type} plan, record is ${identity.planType}`);
-  if (field.option_type !== identity.optionType) throw new Error(`Field is for the ${field.option_type} option, record is ${identity.optionType}`);
   if (expectedScope && field.scope !== expectedScope) throw new Error(`Field scope is ${field.scope}, expected ${expectedScope}`);
+  // Scheme-wide figures (e.g. AMFI AAUM, which combines both plans) carry no plan/option; plan-scoped ones must match.
+  const schemeWide = field.scope === 'scheme' || field.scope === 'scheme-aaum' || field.scope === 'portfolio-disclosure';
+  if (schemeWide && (field.plan_type !== 'Unknown' || field.option_type !== 'Unknown')) {
+    if (field.plan_type !== identity.planType) throw new Error(`Field is for the ${field.plan_type} plan, record is ${identity.planType}`);
+    if (field.option_type !== identity.optionType) throw new Error(`Field is for the ${field.option_type} option, record is ${identity.optionType}`);
+  }
+  if (!schemeWide) {
+    if (field.plan_type !== identity.planType) throw new Error(`Field is for the ${field.plan_type} plan, record is ${identity.planType}`);
+    if (field.option_type !== identity.optionType) throw new Error(`Field is for the ${field.option_type} option, record is ${identity.optionType}`);
+  }
   return field;
 }
