@@ -173,3 +173,5 @@ export type { DatasetTimestamps } from '@/lib/data/provenance';
 export { RESEARCH_FIELD_KEYS } from '@/lib/data/research/types';
 export type { ResearchFieldKey, ProviderStatus, ProviderState } from '@/lib/data/research/types';
 export type { FundProfile } from '@/lib/data/research/profile';
+export { performanceMetrics } from '@/lib/finance/performance';
+export type { PerformanceResult, PeriodReturn, PeriodKey } from '@/lib/finance/performance';
