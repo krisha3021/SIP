@@ -21,15 +21,33 @@ Owner: Agent 2 (finance & data). Last reviewed 2026-10-17.
 | Endpoints used | `GET /mf/{schemeCode}` (full history, newest first). Also observed, not yet used: `/mf/{schemeCode}/latest` and `/mf/search?q=`. |
 | Response shape | Observed on 2026-10-17: `{ meta: { fund_house, scheme_type, scheme_category, scheme_code, scheme_name, isin_growth, isin_div_reinvestment }, data: [{ date: "DD-MM-YYYY", nav: "90.88440" }], status }`. The search endpoint returns `[{ schemeCode, schemeName }]`. Validated with Zod (`navHistorySchema`). |
 | Example | `/mf/122639` → "Parag Parikh Flexi Cap Fund - Direct Plan - Growth", PPFAS Mutual Fund, latest NAV 90.88440 dated 16-10-2026. This was observed live once, by hand, while writing this document. CI never calls the provider. |
-| Rate limits | **Unknown.** No rate-limit headers were observed (the response comes from nginx with no `X-RateLimit-*` headers). Lakshya limits itself with a 6-hour cache, a 60-second cool-down after a failure, request de-duplication, at most 2 retries, and a concurrency of 2 in the daily task. |
-| Reliability / SLA | **None published.** Outages are handled by the last-known-good fallback (`src/lib/data/navService.ts`). |
+| Rate limits | **Contradictory statements (read 2026-10-17).** The home page (https://www.mfapi.in/) says "No authentication, no API keys, no rate limiting". The documentation (https://www.mfapi.in/docs/) says "The API implements rate limiting to ensure fair usage. Please cache responses when appropriate". No rate-limit headers were observed. Lakshya assumes a limit exists and limits itself: a 6-hour cache, a 60-second cool-down after a failure, request de-duplication, at most 2 retries, and a concurrency of 2 in the daily task. |
+| Reliability / SLA | **None published.** The home page claims "99.9% uptime" and links a status page (http://status.mfapi.in/), but there is no contractual SLA. The site says data is updated 6× daily (10:05, 14:05, 18:05, 21:05, 03:09 and 05:05 IST). Outages are handled by the last-known-good fallback (`src/lib/data/navService.ts`). On 2026-10-17 MFAPI's latest NAV for one liquid fund was one day behind AMFI's NAVAll.txt. |
 | Data quality caveats | Rows can carry non-numeric NAVs such as `"N.A."`. Dates and scheme names are free text. The plan (Direct or Regular) and the option (Growth or IDCW) are not separate fields; they are inferred from the scheme name, and `Unknown` is returned rather than a guess. |
-| Terms, redistribution, commercial use | **Not confirmed. Owner decision needed before public launch:** confirm with the MFAPI maintainer whether public display, caching, and redistribution in exports are permitted. |
+| Terms, redistribution, commercial use | **No published terms (checked 2026-10-17).** The footer shows "Privacy Policy" and "Terms of Service", but both link to `#`; `/terms` and `/privacy` return 404, and there is no `robots.txt`. The footer says "© 2025 MFapi.in. All rights reserved." No licence and no official source repository were found (GitHub search on 2026-10-17 found only third-party projects). MFAPI republishes AMFI data, so **AMFI's own terms also apply to the underlying data** (see below). **Owner action:** send the permission request in `docs/owner-actions/mfapi-permission-request.md`. |
+| Contact route | The routes published on https://www.mfapi.in/ are Telegram https://t.me/mfapi_in, X/Twitter https://twitter.com/SkyRocknRoll, and LinkedIn https://www.linkedin.com/in/yuvarajl/. No email address is published. |
 | Security | Server-side only. Request URLs are built from a fixed base URL plus a validated 1–7-digit scheme code, or an encoded search string of at most 80 characters. Arbitrary URLs are never proxied. |
 
+### AMFI website terms of use (read 2026-10-17)
+The source is https://www.amfiindia.com/terms-of-use, linked from the amfiindia.com footer. It applies to all AMFI website
+content, including NAVAll.txt, the TER pages and the AAUM data. Summary (not legal advice):
+- **Permitted use:** a "non-exclusive, personal, non-transferable, non-sublicensable, limited and revocable right to
+  access, use and display this Site … for your personal and non-commercial use only". "No other use of the Site is
+  authorised unless you and we have agreed otherwise in writing."
+- **Prohibited:** "You may not publicly perform, publicly display, transmit, publish … or create derivative works based on
+  anything available through the Site" and "You shall not store electronically any significant portion of any part of the
+  Site". Linking is allowed only to the home page.
+- **Consequence for Lakshya.** Showing AMFI-derived NAVs, TER or AAUM on a public website, caching them, or putting them
+  in exports appears to need AMFI's **written permission**. This also applies to data obtained through MFAPI, because
+  MFAPI republishes AMFI data. **Owner action (required before public launch):** send the request in
+  `docs/owner-actions/amfi-permission-request.md`. Until written permission is held, the AMFI TER/AAUM adapters stay
+  off (`AMFI_REUSE_APPROVED` gate; see §AMFI TER and AAUM below).
+
 ### AMFI NAVAll.txt — a candidate primary source (to evaluate)
-AMFI publishes a daily file of all scheme NAVs (`NAVAll.txt`, semicolon-separated: scheme code, ISINs, scheme name,
-NAV, date), commonly found under amfiindia.com. As the industry body's own publication, it is closer to the primary
+AMFI publishes a daily file of all scheme NAVs: https://portal.amfiindia.com/spages/NAVAll.txt (the old
+www.amfiindia.com/spages path redirects there). It was observed on 2026-10-17: 1.5 MB, `text/plain`, with columns
+`Scheme Code;ISIN Div Payout/ ISIN Growth;ISIN Div Reinvestment;Scheme Name;Plan;Option;Net Asset Value;Date`. The
+separate **Plan** and **Option** columns remove the need to infer them from names. As the industry body's own publication, it is closer to the primary
 source than MFAPI. To evaluate before switching:
 1. Confirm the current official URL and the terms of use with AMFI.
 2. The file holds only the **latest** NAV, so history would have to be built up by Lakshya's own daily ingestion,

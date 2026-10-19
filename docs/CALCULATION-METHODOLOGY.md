@@ -1,6 +1,6 @@
 # Calculation Methodology
 
-Owner: Agent 2 (finance & data). Contract version 0.3.0. Last reviewed 2026-10-17.
+Owner: Agent 2 (finance & data). Contract version 0.4.0. Last reviewed 2026-10-17.
 
 This document states every convention the engines in `src/lib/finance/` use. The UI, the API, and the exports
 show results only through these engines (`@/contracts`), so this document describes every number on the site.
@@ -240,13 +240,17 @@ is synthetic, the report says "Synthetic simulation".
   new-regime marginal relief, and 4 % cess.
 - **Exclusions.** These are listed in `config.ts` and printed in exports: surcharge (incomes above ₹50 lakh are
   refused), special-rate income (capital gains and similar), other deductions and exemptions, non-resident, HUF and
-  corporate taxpayers, and the rounding of total income under s.288A. Capital gains will be a separate module.
+  corporate taxpayers, and the rounding of total income under s.288A. Capital gains on mutual-fund redemptions are estimated separately (§18).
 - **Verification process.** Each financial year has a `status`. Only `verified` years produce estimates. To verify a
   year: (1) check slabs, rebate, standard deduction and limits against the primary text (the Finance Act and the
   Income Tax Department pages); (2) record the sources and who checked them, and when, in `verification`;
   (3) get owner review; (4) add tests with hand-computed liabilities at the slab boundaries.
-  **FY 2025-26** is verified (2026-10-17). **FY 2026-27** is `unverified` and stays disabled until the Finance Act
-  2026 text has been checked. Owner decision pending.
+  **FY 2025-26** is verified (2026-10-17). **FY 2026-27** was checked against the primary texts on 2026-10-17: the
+  Finance Act, 2026 (No. 4 of 2026; eGazette) and the Income-tax Act, 2025 as amended by it. The references are
+  s.202(1) slabs, s.156 rebate, s.19(1) standard deduction, ss.123, 124(3) and 126 limits, First Schedule Part I-B
+  Paragraphs A and F, and s.3(15) cess. All values are unchanged from FY 2025-26. The year carries
+  `pendingOwnerApproval: true` and stays `unverified` (disabled). **Owner action:** review `verificationEvidence` in
+  `tax/config.ts`, then set `status: 'verified'` and `pendingOwnerApproval: false`.
 
 ## 16. Report payloads (`src/lib/export/reportBuilders.ts`, added in 0.2.0)
 
@@ -337,3 +341,83 @@ the horizon 0–60 years. Tests: `tests/finance/lifeStage.test.ts`. These cover 
 boundary, band edges (85 → high growth, 78 → growth), retirement ≤ current age and other invalid inputs, the
 prerequisite flags and caps, glide-path rows derived by hand, monotonicity, determinism, edited and invalid configs,
 the PFRDA mapping, the notice and forbidden wording, the stress test, and the report payload.
+
+## 18. Capital gains on mutual-fund redemptions (`tax/capitalGains.ts`, `tax/capitalGainsConfig.ts`; added in 0.4.0)
+
+**Mandatory notice.** The UI must show this text with every result. The constant is `CAPITAL_GAINS_NOTICE`:
+
+> Educational estimate only, for resident individuals redeeming Indian mutual-fund units. It is not tax advice. It applies
+> only the rules listed, each checked against the source shown, and leaves out surcharge, loss set-off and carry-forward, the
+> basic-exemption adjustment, the s.87A rebate and the other items listed. Your actual tax depends on your full return. Check
+> with a qualified tax professional or the Income Tax Department before filing. Lakshya is not registered with SEBI as an
+> investment adviser.
+
+This module is separate from income tax. Gains taxed at slab rates use the **marginal slab rate the user enters**, which
+must be one of 0, 5, 10, 15, 20, 25 or 30 %. The module never computes income tax itself.
+
+**Rules encoded for FY 2025-26.** Each rule was read from a live copy of the source on 2026-10-17. Every result lists the
+rules it used, with their URLs.
+
+| Rule | Encoded value | Primary source |
+|---|---|---|
+| Equity-oriented fund units: long-term if held **more than 12 months** | 12 | incometaxindia.gov.in — Tax on long-term capital gains |
+| Other units: long-term if held **more than 24 months** (36 before 23-07-2024) | 24 | same |
+| STCG on equity-oriented units, s.111A (transaction chargeable to STT) | 20 % (15 % before 23-07-2024) | incometaxindia.gov.in — Tax on short-term capital gains |
+| LTCG on equity-oriented units, s.112A, above the annual exemption | 12.5 % above ₹1,25,000 (10 % before 23-07-2024) | Tax on long-term capital gains |
+| Grandfathering, units acquired before 1-2-2018 | cost = max(actual, min(FMV 31-1-2018, sale value)); for unlisted units FMV = NAV on 31-1-2018 | Tax on long-term capital gains |
+| STT on the sale of equity-oriented units to the Mutual Fund | 0.001 % (seller), so the STT condition is met | Finance (No. 2) Act 2004, s.98 (incometaxindia.gov.in) |
+| Specified Mutual Fund units acquired on or after 1-4-2023 | deemed STCG, slab rate, any holding period | Income-tax Act s.50AA (incometaxindia.gov.in) |
+| Other LTCG, s.112 | 12.5 %, **no indexation** for transfers on or after 23-07-2024 | Tax on long-term capital gains |
+| Other STCG (not s.111A) | slab rate ("normal rate") | Tax on short-term capital gains |
+| Health and education cess | 4 % of tax | the verified FY 2025-26 income-tax config |
+
+**Specified Mutual Fund definition.** The definition depends on the date. Before 1-4-2026, it is a fund with at most
+35 % of its proceeds in domestic equity. From 1-4-2026, as substituted by the Finance (No. 2) Act 2024, it is a fund
+with more than 65 % in debt and money-market instruments, or a fund with 65 % or more in such funds. The user chooses the
+fund type; `FUND_TYPE_EXPLANATIONS` explains each type, and the AMC's statement shows the classification. Lakshya does not
+classify schemes itself.
+
+**Method.**
+1. **FIFO.** The oldest lot is matched first, which is what the registrars (RTAs: CAMS and KFintech) apply to
+   redemptions. Lots with the same date keep the order in which they were entered.
+2. **Holding period.** "More than N months" means the redemption date falls *after* the date N calendar months after
+   purchase. A day past the end of the month is clamped, so 29 Feb + 12 months is 28 Feb. Holding exactly 12 months is
+   therefore short-term. This is how Lakshya reads "more than"; edge days can be argued, so check them against your AMC
+   statement.
+3. **Classification of each slice.**
+   - Equity-oriented: long → s.112A, short → s.111A.
+   - Specified, acquired on or after 1-4-2023 → s.50AA at slab rate.
+   - Specified, acquired earlier, or other: long → s.112, short → slab rate.
+4. **Grandfathered cost.** This applies to equity units acquired before 1-2-2018. The NAV on 31-1-2018 must be
+   supplied; without it the module returns `INVALID_INPUT` and never approximates the value.
+5. **Netting.** Gains are netted within each treatment, for this redemption only. A net loss is taxed at zero, with a
+   warning. Set-off across treatments and carry-forward are not modelled.
+6. **s.112A exemption.** Available = max(0, ₹1,25,000 − s.112A LTCG already realised this year). The amount used is
+   min(available, net s.112A gain).
+7. **Tax.** Tax is the taxable amount × the rate for each component. Cess is 4 % of their sum. The result is not rounded.
+
+**Disabled paths. These are never estimated.**
+- **FY 2026-27** returns `UNVERIFIED_RULES`. That year falls under the Income-tax Act 2025 and the Finance Act 2026,
+  which have not been checked.
+- **Other financial years** return `UNSUPPORTED`. FY 2024-25 is split by the 23-07-2024 change and is not encoded.
+- **Exchange-listed units of non-equity funds** (for example some ETFs) return `UNVERIFIED_RULES`. Their holding
+  period could not be confirmed from a primary-source page.
+
+**Exclusions.** These are listed in the config and printed in exports:
+- surcharge;
+- STT and stamp-duty amounts;
+- loss set-off and carry-forward;
+- the unexhausted basic-exemption adjustment and the s.87A rebate;
+- non-residents, TDS, HUFs;
+- IDCW, switches, bonus units and segregated portfolios;
+- ELSS lock-in (a warning only);
+- grandfathering without the FMV;
+- rounding under ss.288A and 288B;
+- listed non-equity units.
+
+Tests: `tests/finance/capitalGains.test.ts`. The cases are worked by hand: FIFO across a long lot and a short lot
+(total ₹19,370), the exemption already used elsewhere, input-order independence, and the Income Tax Department's own
+grandfathering illustration (gain ₹1,40,000 → taxable ₹15,000 → ₹1,875 + cess). The tests also cover the three
+branches of the grandfathering rule; the 12- and 24-month boundaries, including 29 Feb; s.50AA before and after
+1-4-2023; slab versus s.112; losses; ELSS; total-cost input; the disabled paths and invalid inputs; and sources on
+every rule.

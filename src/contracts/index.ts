@@ -3,9 +3,9 @@
  *
  * The UI, API routes, charts, and exports import financial types and engines ONLY through this module.
  * Changing anything exported here requires a documented change in docs/CONTRACTS.md, a notice to the
- * other agent, and updated tests on both sides. Version: 0.3.0 (additive: Life-stage & Risk Planner, 2026-10-17; baseline 0.1.0).
+ * other agent, and updated tests on both sides. Version: 0.4.0 (additive: capital-gains estimator, 2026-10-17; baseline 0.1.0).
  */
-export const CONTRACT_VERSION = '0.3.0';
+export const CONTRACT_VERSION = '0.4.0';
 
 // ── Result envelope and conventions ──────────────────────────────────────────
 export type { CalcResult, CalcError, CalcErrorCode, ContributionTiming, RateConvention } from '@/lib/finance/types';
@@ -27,6 +27,20 @@ export type { DatedCashFlow, XirrResult } from '@/lib/finance/xirr';
 export { compareIncomeTax, incomeTaxInputSchema } from '@/lib/finance/tax/incomeTax';
 export type { IncomeTaxInput, IncomeTaxComparison, RegimeEstimate } from '@/lib/finance/tax/incomeTax';
 export { SUPPORTED_TAX_YEARS, TAX_YEARS } from '@/lib/finance/tax/config';
+// 0.4.0: capital-gains estimate on mutual-fund redemptions (separate from income tax; show CAPITAL_GAINS_NOTICE).
+export {
+  estimateCapitalGains,
+  capitalGainsInputSchema,
+  heldMoreThanMonths,
+  CAPITAL_GAINS_NOTICE,
+  FUND_TYPES,
+  FUND_TYPE_EXPLANATIONS,
+  SLAB_RATES_PCT,
+  TREATMENT_LABELS,
+} from '@/lib/finance/tax/capitalGains';
+export type { CapitalGainsInput, CapitalGainsResult, FundType, GainTreatment, LotSlice, TreatmentTotal } from '@/lib/finance/tax/capitalGains';
+export { CAPITAL_GAINS_YEARS, SUPPORTED_CAPITAL_GAINS_YEARS } from '@/lib/finance/tax/capitalGainsConfig';
+export type { CapitalGainsYearConfig, CapitalGainsRule, RuleSource } from '@/lib/finance/tax/capitalGainsConfig';
 
 // ── 0.2.0 planning engines ───────────────────────────────────────────────────
 export { planCashFlow, cashFlowInputSchema } from '@/lib/finance/cashflow';
@@ -102,6 +116,7 @@ export {
   buildRetirementReport,
   buildAllocationReport,
   buildLifeStageReport,
+  buildCapitalGainsReport,
 } from '@/lib/export/reportBuilders';
 export type { ReportContext } from '@/lib/export/reportBuilders';
 

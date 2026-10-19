@@ -43,7 +43,8 @@ export interface IncomeTaxComparison {
   old: RegimeEstimate;
   lowerRegime: 'new' | 'old' | 'equal';
   difference: number;
-  config: Pick<TaxYearConfig, 'sources' | 'verification' | 'exclusions'>;
+  /** `cessRate` (decimal, e.g. 0.04) added in contract 0.4.0 so the UI can label the cess line. */
+  config: Pick<TaxYearConfig, 'sources' | 'verification' | 'exclusions' | 'cessRate'>;
 }
 
 export function slabTax(income: number, slabs: Slab[]): number {
@@ -121,6 +122,6 @@ export function compareIncomeTax(input: IncomeTaxInput): CalcResult<IncomeTaxCom
     old: o,
     lowerRegime: diff < 0.5 ? 'equal' : n.totalTax < o.totalTax ? 'new' : 'old',
     difference: diff,
-    config: { sources: cfg.sources, verification: cfg.verification, exclusions: cfg.exclusions },
+    config: { sources: cfg.sources, verification: cfg.verification, exclusions: cfg.exclusions, cessRate: cfg.cessRate },
   });
 }
