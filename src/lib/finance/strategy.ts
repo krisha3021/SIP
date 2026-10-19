@@ -63,6 +63,8 @@ type Parsed = z.infer<typeof strategyInputSchema>;
 export interface StrategyOutcome {
   id: string;
   label: string;
+  /** Number-free name used in facts and explanations, so naming a strategy never introduces an unbacked figure. */
+  name: string;
   kind: 'contribution' | 'allocation';
   description: string;
   startingMonthly: number;
@@ -118,6 +120,7 @@ export function blendedAssumptions(
 interface Spec {
   id: string;
   label: string;
+  name: string;
   kind: StrategyOutcome['kind'];
   description: string;
   monthly: number;
@@ -135,14 +138,15 @@ export function compareStrategies(input: StrategyInput): CalcResult<StrategyResu
   const cap = v.monthlyCapacity;
 
   const specs: Spec[] = [
-    { id: 'fixed-sip', label: 'Fixed SIP', kind: 'contribution', description: 'Your monthly capacity, unchanged every year; existing corpus not invested here.', monthly: cap, stepUpPct: 0, initialCorpus: 0, mix: baseMix },
-    { id: 'step-up-sip', label: `Step-up SIP (+${v.stepUpPct}%/yr)`, kind: 'contribution', description: `Starts at your capacity and rises ${v.stepUpPct}% each year.`, monthly: cap, stepUpPct: v.stepUpPct, initialCorpus: 0, mix: baseMix },
-    { id: 'lumpsum-plus-sip', label: 'Lump sum + SIP', kind: 'contribution', description: 'Existing goal corpus invested at the start, plus a fixed SIP at your capacity.', monthly: cap, stepUpPct: 0, initialCorpus: v.existingCorpus, mix: baseMix },
-    { id: 'contribution-75', label: 'SIP at 75% of capacity', kind: 'contribution', description: 'A lower fixed SIP, for comparison.', monthly: cap * 0.75, stepUpPct: 0, initialCorpus: 0, mix: baseMix },
-    { id: 'contribution-125', label: 'SIP at 125% of capacity', kind: 'contribution', description: 'A higher fixed SIP than the capacity you entered — shown only for comparison.', monthly: cap * 1.25, stepUpPct: 0, initialCorpus: 0, mix: baseMix },
+    { id: 'fixed-sip', label: 'Fixed SIP', name: 'Fixed SIP', kind: 'contribution', description: 'Your monthly capacity, unchanged every year; existing corpus not invested here.', monthly: cap, stepUpPct: 0, initialCorpus: 0, mix: baseMix },
+    { id: 'step-up-sip', label: `Step-up SIP (+${v.stepUpPct}%/yr)`, name: 'Step-up SIP', kind: 'contribution', description: `Starts at your capacity and rises ${v.stepUpPct}% each year.`, monthly: cap, stepUpPct: v.stepUpPct, initialCorpus: 0, mix: baseMix },
+    { id: 'lumpsum-plus-sip', label: 'Lump sum + SIP', name: 'Lump sum + SIP', kind: 'contribution', description: 'Existing goal corpus invested at the start, plus a fixed SIP at your capacity.', monthly: cap, stepUpPct: 0, initialCorpus: v.existingCorpus, mix: baseMix },
+    { id: 'contribution-75', label: 'SIP at 75% of capacity', name: 'Lower SIP level', kind: 'contribution', description: 'A lower fixed SIP, for comparison.', monthly: cap * 0.75, stepUpPct: 0, initialCorpus: 0, mix: baseMix },
+    { id: 'contribution-125', label: 'SIP at 125% of capacity', name: 'Higher SIP level', kind: 'contribution', description: 'A higher fixed SIP than the capacity you entered — shown only for comparison.', monthly: cap * 1.25, stepUpPct: 0, initialCorpus: 0, mix: baseMix },
     ...v.mixes.map((m, i) => ({
       id: `mix-${i + 1}`,
       label: `${m.label} (${m.equityPct}/${m.debtPct}/${m.goldPct})`,
+      name: /[0-9]/.test(m.label) ? `Mix ${['one', 'two', 'three'][i]}` : m.label,
       kind: 'allocation' as const,
       description: `Lump sum + fixed SIP with ${m.equityPct}% equity, ${m.debtPct}% debt, ${m.goldPct}% gold.`,
       monthly: cap,
@@ -188,6 +192,7 @@ export function compareStrategies(input: StrategyInput): CalcResult<StrategyResu
     strategies.push({
       id: s.id,
       label: s.label,
+      name: s.name,
       kind: s.kind,
       description: s.description,
       startingMonthly: s.monthly,
@@ -210,6 +215,7 @@ export function compareStrategies(input: StrategyInput): CalcResult<StrategyResu
     { id: 'inputs.monthlyCapacity', label: 'Monthly capacity you entered', value: cap, unit: 'inr' },
     { id: 'inputs.existingCorpus', label: 'Existing goal corpus', value: v.existingCorpus, unit: 'inr' },
     { id: 'inputs.inflationPct', label: 'Inflation assumption', value: v.inflationPct, unit: 'percent' },
+    { id: 'inputs.stepUpPct', label: 'Yearly step-up used by the step-up SIP', value: v.stepUpPct, unit: 'percent' },
     { id: 'inputs.simulations', label: 'Simulated paths per strategy', value: v.simulations, unit: 'count' },
   ];
   if (futureTarget !== null) {
@@ -219,22 +225,22 @@ export function compareStrategies(input: StrategyInput): CalcResult<StrategyResu
   for (const s of strategies) {
     const p = s.id;
     facts.push(
-      { id: `${p}.startingMonthly`, label: `${s.label}: starting monthly amount`, value: s.startingMonthly, unit: 'inr' },
-      { id: `${p}.totalContributions`, label: `${s.label}: total contributions`, value: s.totalContributions, unit: 'inr' },
-      { id: `${p}.corpusNominal`, label: `${s.label}: projected corpus at the assumed return`, value: s.corpusNominal, unit: 'inr' },
-      { id: `${p}.corpusToday`, label: `${s.label}: projected corpus in today's rupees`, value: s.corpusToday, unit: 'inr' },
-      { id: `${p}.blendedReturnPct`, label: `${s.label}: assumed return`, value: s.assumedReturnPct, unit: 'percent' },
-      { id: `${p}.blendedVolatilityPct`, label: `${s.label}: assumed volatility`, value: s.assumedVolatilityPct, unit: 'percent' },
-      { id: `${p}.mcP10`, label: `${s.label}: simulated 10th percentile corpus`, value: s.monteCarlo.p10, unit: 'inr' },
-      { id: `${p}.mcP50`, label: `${s.label}: simulated median corpus`, value: s.monteCarlo.p50, unit: 'inr' },
-      { id: `${p}.mcP90`, label: `${s.label}: simulated 90th percentile corpus`, value: s.monteCarlo.p90, unit: 'inr' },
+      { id: `${p}.startingMonthly`, label: `${s.name}: starting monthly amount`, value: s.startingMonthly, unit: 'inr' },
+      { id: `${p}.totalContributions`, label: `${s.name}: total contributions`, value: s.totalContributions, unit: 'inr' },
+      { id: `${p}.corpusNominal`, label: `${s.name}: projected corpus at the assumed return`, value: s.corpusNominal, unit: 'inr' },
+      { id: `${p}.corpusToday`, label: `${s.name}: projected corpus in today's rupees`, value: s.corpusToday, unit: 'inr' },
+      { id: `${p}.blendedReturnPct`, label: `${s.name}: assumed return`, value: s.assumedReturnPct, unit: 'percent' },
+      { id: `${p}.blendedVolatilityPct`, label: `${s.name}: assumed volatility`, value: s.assumedVolatilityPct, unit: 'percent' },
+      { id: `${p}.mcP10`, label: `${s.name}: simulated lower-decile corpus (weak outcome)`, value: s.monteCarlo.p10, unit: 'inr' },
+      { id: `${p}.mcP50`, label: `${s.name}: simulated median corpus`, value: s.monteCarlo.p50, unit: 'inr' },
+      { id: `${p}.mcP90`, label: `${s.name}: simulated upper-decile corpus (strong outcome)`, value: s.monteCarlo.p90, unit: 'inr' },
     );
-    if (s.monteCarlo.goalSuccessRate !== null) facts.push({ id: `${p}.goalSuccessPct`, label: `${s.label}: share of simulated paths reaching the goal`, value: s.monteCarlo.goalSuccessRate * 100, unit: 'percent' });
+    if (s.monteCarlo.goalSuccessRate !== null) facts.push({ id: `${p}.goalSuccessPct`, label: `${s.name}: share of simulated paths reaching the goal`, value: s.monteCarlo.goalSuccessRate * 100, unit: 'percent' });
     if (s.goal) {
       facts.push(
-        { id: `${p}.requiredMonthly`, label: `${s.label}: monthly amount needed at the assumed return`, value: s.goal.requiredMonthly, unit: 'inr' },
-        { id: `${p}.additionalMonthly`, label: `${s.label}: extra monthly amount needed`, value: s.goal.additionalMonthly, unit: 'inr' },
-        { id: `${p}.shortfall`, label: `${s.label}: shortfall at the assumed return`, value: s.goal.shortfallAtAssumedReturn, unit: 'inr' },
+        { id: `${p}.requiredMonthly`, label: `${s.name}: monthly amount needed at the assumed return`, value: s.goal.requiredMonthly, unit: 'inr' },
+        { id: `${p}.additionalMonthly`, label: `${s.name}: extra monthly amount needed`, value: s.goal.additionalMonthly, unit: 'inr' },
+        { id: `${p}.shortfall`, label: `${s.name}: shortfall at the assumed return`, value: s.goal.shortfallAtAssumedReturn, unit: 'inr' },
       );
     }
   }

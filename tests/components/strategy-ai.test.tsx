@@ -88,3 +88,14 @@ describe('Strategy Lab — AI explanation flow', () => {
     expect(cap.value).toBe(before);
   });
 });
+
+describe('review fix — focus after the AI dialog closes', () => {
+  it('returns focus to "Explain with AI" after Approve, even while the request is running', async () => {
+    stub(ENABLED);
+    render(<StrategyLabWithAi />);
+    const trigger = await screen.findByRole('button', { name: /explain with ai/i });
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByRole('button', { name: 'Approve this action' }));
+    expect(screen.getByRole('button', { name: /explain/i })).toHaveFocus();
+  });
+});

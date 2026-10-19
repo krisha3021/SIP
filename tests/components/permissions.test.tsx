@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import React from 'react';
 import './setup-dom';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
@@ -104,5 +105,27 @@ describe('SavedPlans deletion', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Approve this action' }));
     expect(readPlans()).toHaveLength(0);
     expect(readAudit()[0]).toMatchObject({ action: 'delete-saved-plan', outcome: 'approved' });
+  });
+});
+
+describe('review fix — focus returns to the opener', () => {
+  function Harness() {
+    const [open, setOpen] = React.useState(false);
+    return (
+      <>
+        <button onClick={() => setOpen(true)}>Open it</button>
+        {open && <PermissionDialog open request={request} onApprove={() => setOpen(false)} onCancel={() => setOpen(false)} />}
+      </>
+    );
+  }
+  it('moves focus back to the button that opened the dialog after Cancel and after Approve', async () => {
+    render(<Harness />);
+    const opener = screen.getByRole('button', { name: 'Open it' });
+    await userEvent.click(opener);
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(opener).toHaveFocus();
+    await userEvent.click(opener);
+    await userEvent.click(screen.getByRole('button', { name: 'Approve this action' }));
+    expect(opener).toHaveFocus();
   });
 });

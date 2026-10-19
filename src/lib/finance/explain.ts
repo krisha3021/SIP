@@ -12,7 +12,8 @@ export function formatFact(f: GroundingFact): string {
     case 'inr':
       return formatINRCompact(f.value);
     case 'percent':
-      return `${f.value.toFixed(1)}%`;
+      // Typographic minus, matching formatPct and the grounding checker.
+      return `${f.value < 0 ? '−' : ''}${Math.abs(f.value).toFixed(1)}%`;
     default:
       return String(Math.round(f.value));
   }
@@ -38,10 +39,7 @@ export function explainStrategies(result: StrategyResult): Explanation {
   const s = (id: string) => result.strategies.find((x) => x.id === id)!;
   const mixes = result.strategies.filter((x) => x.kind === 'allocation');
   /** Number-free display name, so labels never introduce figures that are not facts. */
-  const nameOf = (x: StrategyResult['strategies'][number], i: number) => {
-    const label = x.label.replace(/s*(.*)s*$/, '');
-    return /d/.test(label) ? `Mix ${i + 1}` : label;
-  };
+  const nameOf = (x: StrategyResult['strategies'][number]) => x.name;
 
   const sections: Explanation['sections'] = [];
 
@@ -67,13 +65,13 @@ export function explainStrategies(result: StrategyResult): Explanation {
     const sorted = [...mixes].sort((a, b) => b.assumedVolatilityPct - a.assumedVolatilityPct);
     const hi = sorted[0]!;
     const lo = sorted[sorted.length - 1]!;
-    const hiName = nameOf(hi, mixes.indexOf(hi));
-    const loName = nameOf(lo, mixes.indexOf(lo));
+    const hiName = nameOf(hi);
+    const loName = nameOf(lo);
     sections.push({
       heading: 'Allocation trade-offs',
       paragraphs: [
         `${hiName} assumes ${v(`${hi.id}.blendedReturnPct`)} with ${v(`${hi.id}.blendedVolatilityPct`)} volatility; ${loName} assumes ${v(`${lo.id}.blendedReturnPct`)} with ${v(`${lo.id}.blendedVolatilityPct`)}.`,
-        `Across simulated paths, ${hiName} ranges from ${v(`${hi.id}.mcP10`)} (10th percentile) to ${v(`${hi.id}.mcP90`)} (90th), and ${loName} from ${v(`${lo.id}.mcP10`)} to ${v(`${lo.id}.mcP90`)}. A higher assumed return comes with a ${num(`${hi.id}.mcP90`) - num(`${hi.id}.mcP10`) > num(`${lo.id}.mcP90`) - num(`${lo.id}.mcP10`) ? 'wider' : 'different'} spread of outcomes.`,
+        `Across simulated paths, ${hiName} ranges from ${v(`${hi.id}.mcP10`)} (a weak outcome, lower decile) to ${v(`${hi.id}.mcP90`)} (a strong outcome, upper decile), and ${loName} from ${v(`${lo.id}.mcP10`)} to ${v(`${lo.id}.mcP90`)}. A higher assumed return comes with a ${num(`${hi.id}.mcP90`) - num(`${hi.id}.mcP10`) > num(`${lo.id}.mcP90`) - num(`${lo.id}.mcP10`) ? 'wider' : 'different'} spread of outcomes.`,
       ],
     });
   }
@@ -81,7 +79,7 @@ export function explainStrategies(result: StrategyResult): Explanation {
   sections.push({
     heading: 'Downside and uncertainty',
     paragraphs: [
-      `In a weak outcome (10th percentile of ${v('inputs.simulations')} simulated paths), the fixed SIP ends near ${v('fixed-sip.mcP10')} against a median of ${v('fixed-sip.mcP50')}. The simulated median is below the projection at the assumed return because returns vary.`,
+      `In a weak outcome (the lower decile of ${v('inputs.simulations')} simulated paths), the fixed SIP ends near ${v('fixed-sip.mcP10')} against a median of ${v('fixed-sip.mcP50')}. The simulated median is below the projection at the assumed return because returns vary.`,
     ],
   });
 

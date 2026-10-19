@@ -156,7 +156,11 @@ export function StrategyLab({ onExplainWithAi }: { onExplainWithAi?: (r: Strateg
         </Button>
       </form>
 
-      <div className="min-w-0 space-y-6" aria-live="polite">
+      <div className="min-w-0 space-y-6">
+        {/* A short announcement instead of re-reading the whole table on every keystroke. */}
+        <p role="status" aria-label="Results status" className="sr-only">
+          {!input ? 'No result for these inputs' : result && !result.ok ? 'These assumptions can’t be used' : result?.ok ? 'Results updated' : ''}
+        </p>
         {!input && <Notice tone="warning" title="No result for these inputs">Some inputs are not valid numbers. Fix the highlighted fields.</Notice>}
         {input && result && !result.ok && (
           <Notice tone="warning" title="These assumptions can’t be used">

@@ -35,3 +35,11 @@ describe('StrategyLab', () => {
     expect(screen.getByText(/must add up to 100/i)).toBeInTheDocument();
   });
 });
+
+describe('review fix — screen-reader announcements', () => {
+  it('does not make the whole results area live; announces a short summary instead', () => {
+    const { container } = render(<StrategyLab />);
+    expect(container.querySelector('[aria-live] table')).toBeNull();
+    expect(screen.getByRole('status', { name: /results status/i })).toHaveTextContent(/results updated/i);
+  });
+});

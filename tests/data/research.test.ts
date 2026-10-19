@@ -124,3 +124,21 @@ describe('buildFundProfile', () => {
     expect(profile.providers.map((p) => p.id)).toEqual(expect.arrayContaining(['amfi', 'ratings', 'documents']));
   });
 });
+
+describe('review fix — AMFI timeout applies even when a caller signal is passed', () => {
+  it('gives up after timeoutMs although the request signal never aborts', async () => {
+    const hang = (_u: string, init?: RequestInit) =>
+      new Promise<Response>((_, reject) => init?.signal?.addEventListener('abort', () => reject(Object.assign(new Error('t'), { name: 'TimeoutError' }))));
+    const p = createAmfiResearchProvider({
+      env: { AMFI_REUSE_APPROVED: 'true', AMFI_TER_DATA_URL: 'https://www.amfiindia.com/ter.json', AMFI_AAUM_DATA_URL: 'https://www.amfiindia.com/aaum.json' },
+      fetchImpl: hang as unknown as typeof fetch,
+      now: () => new Date(NOW),
+      timeoutMs: 50,
+      retries: 0,
+    });
+    const neverAborts = new AbortController().signal;
+    const f = await p.fetch(direct, neverAborts);
+    expect(f.ter).toMatchObject({ status: 'not-available', value: null });
+    expect(f.ter?.reason).toMatch(/did not respond in time/);
+  }, 2000);
+});

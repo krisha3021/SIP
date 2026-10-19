@@ -90,7 +90,8 @@ function AiExplainPanel({ result }: { result: StrategyResult }) {
           Sends only the computed figures listed in the approval dialog to {status.provider}. Your inputs are not sent as typed; no names, contact details or free text.
         </p>
       )}
-      <Button variant="secondary" disabled={!status?.enabled || busy} onClick={() => setAsking(true)}>
+      {/* aria-disabled (not disabled) while busy, so focus can return here after the dialog closes. */}
+      <Button variant="secondary" disabled={!status?.enabled} aria-disabled={busy || undefined} onClick={() => !busy && setAsking(true)}>
         {busy ? 'Explaining…' : 'Explain with AI'}
       </Button>
       <p role="status" aria-live="polite" className="text-sm">

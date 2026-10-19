@@ -37,10 +37,15 @@ export function PermissionDialog({ open, request, onApprove, onCancel }: { open:
 
   useEffect(() => {
     const d = ref.current;
-    if (!d) return;
-    if (open && !d.open) d.showModal();
-    if (!open && d.open) d.close();
-    if (open) cancelRef.current?.focus();
+    if (!d || !open) return;
+    // Remember the opener so focus can return to it (WCAG 2.4.3), whether the caller closes or unmounts the dialog.
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (!d.open) d.showModal();
+    cancelRef.current?.focus();
+    return () => {
+      if (d.open) d.close();
+      if (opener && opener.isConnected) opener.focus();
+    };
   }, [open]);
 
   const rows: Array<[string, React.ReactNode]> = [

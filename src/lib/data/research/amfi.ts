@@ -102,7 +102,9 @@ async function getJson(url: string, deps: ResearchDeps, signal?: AbortSignal): P
   for (let attempt = 0; attempt <= retries; attempt++) {
     if (attempt > 0) await new Promise((r) => setTimeout(r, 250 * 2 ** (attempt - 1)));
     try {
-      const res = await deps.fetchImpl(url, { signal: signal ?? AbortSignal.timeout(deps.timeoutMs ?? 8000), headers: { Accept: 'application/json' }, cache: 'no-store' });
+      // Always bound by our own timeout, combined with the caller's signal (e.g. the request being cancelled).
+      const timeout = AbortSignal.timeout(deps.timeoutMs ?? 8000);
+      const res = await deps.fetchImpl(url, { signal: signal ? AbortSignal.any([signal, timeout]) : timeout, headers: { Accept: 'application/json' }, cache: 'no-store', redirect: 'error' });
       if (!res.ok) {
         last = `AMFI responded with HTTP ${res.status}`;
         if (res.status >= 500 || res.status === 429) continue;
