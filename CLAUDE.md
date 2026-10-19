@@ -30,4 +30,5 @@ must be retained. Read `docs/AUDIT.md` (what was wrong with the prototype) and `
 - Tests use independently established expected values and deterministic fixtures, and never hit live APIs in CI.
 - Secrets stay server-side and out of logs. `.env*` files other than `.env.example` must never be committed.
 - Do not push, merge to the production branch, deploy, buy services, or change external accounts without explicit owner approval.
+- Owner rule (2026-10-17): every GitHub push and every production deploy needs the owner's real-time "yes" at that moment. Earlier approvals do not carry over.
 - Commit messages end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
