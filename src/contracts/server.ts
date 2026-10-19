@@ -27,3 +27,6 @@ export { InMemoryMfDataStore } from '@/lib/automation/tasks/storage';
 export { isAuthorizedCronRequest } from '@/lib/automation/tasks/cronAuth';
 export { consoleTaskLogger } from '@/lib/automation/tasks/logging';
 export type { TaskLogger } from '@/lib/automation/tasks/logging';
+
+// ── 0.5.0: scheme identity normalisation (uses the MFAPI plan/option parser, so server-only) ──
+export { parseSchemeIdentity, isValidIsin } from '@/lib/data/identity';

@@ -1,6 +1,6 @@
 # Shared Contract — Agent 1 (Website) ⇄ Agent 2 (Finance & Data)
 
-Contract version: **0.4.0** (additive, 2026-10-17; baseline 0.1.0 from Phase 1). The code lives in
+Contract version: **0.5.0** (additive, 2026-10-19; baseline 0.1.0 from Phase 1). The code lives in
 `src/contracts/index.ts` (safe for client and server) and `src/contracts/server.ts` (server-only: data services and
 automation; never import it from a client component).
 
@@ -36,6 +36,10 @@ real value: render the fields the engine returns.
   Agent 1 owns the manifests and migrations.
 
 ## Changelog
+### 0.5.0 — 2026-10-19 (research-platform upgrade, additive; branch `release/research-upgrade`)
+- `@/contracts`: `ProvenancedField` and its builders `availableField` / `unavailableField`, plus the `assertSamePlan` guard (scheme, plan, option, scope), and the `SchemeIdentity` type.
+- `@/contracts/server`: `parseSchemeIdentity` and `isValidIsin`.
+
 ### 0.4.0 — 2026-10-17 (Agent 2, additive; branch `agent-2/capital-gains`)
 - Adds a capital-gains estimate for mutual-fund redemptions to `@/contracts`. It is separate from income tax.
   - `estimateCapitalGains(input)` and `capitalGainsInputSchema`.

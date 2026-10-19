@@ -3,9 +3,9 @@
  *
  * The UI, API routes, charts, and exports import financial types and engines ONLY through this module.
  * Changing anything exported here requires a documented change in docs/CONTRACTS.md, a notice to the
- * other agent, and updated tests on both sides. Version: 0.4.0 (additive: capital-gains estimator, 2026-10-17; baseline 0.1.0).
+ * other agent, and updated tests on both sides. Version: 0.5.0 (additive, 2026-10-19; baseline 0.1.0).
  */
-export const CONTRACT_VERSION = '0.4.0';
+export const CONTRACT_VERSION = '0.5.0';
 
 // ── Result envelope and conventions ──────────────────────────────────────────
 export type { CalcResult, CalcError, CalcErrorCode, ContributionTiming, RateConvention } from '@/lib/finance/types';
@@ -163,3 +163,8 @@ export interface AutomationRunReport {
 }
 
 // Server-only data services and the automation task are exported from '@/contracts/server' (0.2.0).
+
+// ── 0.5.0: field-level provenance (research-platform upgrade, 2026-10-19) ───
+export { availableField, unavailableField, assertSamePlan } from '@/lib/data/fields';
+export type { ProvenancedField, FieldStatus, FieldScope, FieldUnit, UsageStatus, ValidationStatus, FieldContext } from '@/lib/data/fields';
+export type { SchemeIdentity } from '@/lib/data/identity';
