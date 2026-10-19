@@ -7,6 +7,7 @@ import { Menu, X } from 'lucide-react';
 import { PRIMARY_NAV, isActive } from './nav';
 import { ThemeToggle } from './ThemeToggle';
 import { LogoMark } from './LogoMark';
+import { CurrentTimeIST } from './CurrentTimeIST';
 
 export function SiteHeader() {
   const pathname = usePathname() ?? '/';
@@ -54,6 +55,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2 xl:ml-2">
+          <CurrentTimeIST />
           <ThemeToggle />
           <button
             type="button"

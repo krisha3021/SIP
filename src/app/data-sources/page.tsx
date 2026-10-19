@@ -28,6 +28,9 @@ export default function DataSourcesPage() {
               <strong>Freshness:</strong> NAVs are published once per business day. A NAV is shown as the latest available when it is within three weekdays of today (India time); otherwise it is marked stale.
             </li>
             <li>
+              <strong>Header clock:</strong> “Current time — IST” comes from your device’s clock and shows only the time now. It is not verified server time, and it says nothing about how current any NAV, AUM, holding or rating is. Each dataset shows its own observation and retrieval dates.
+            </li>
+            <li>
               <strong>Caching:</strong> our server reuses a successfully fetched copy for up to 6 hours (NAVs change at most once per business day). If the provider fails, the last good copy is served with its original dates and a &quot;Cached&quot; label.
             </li>
             <li>The provider&apos;s terms for commercial use and redistribution must be confirmed before public launch.</li>

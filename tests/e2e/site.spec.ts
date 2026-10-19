@@ -411,3 +411,18 @@ test.describe('legal drafts', () => {
     });
   }
 });
+
+test.describe('header clock', () => {
+  test('shows the current IST time from the device clock and ticks', async ({ page }) => {
+    await page.goto('/');
+    const clock = page.locator('[data-clock]');
+    await expect(clock).toBeVisible();
+    await expect(clock).toContainText('Current time — IST');
+    await expect(clock).toHaveAttribute('title', /device's clock/i);
+    const time = clock.locator('time');
+    await expect(time).toHaveText(/\d{1,2}:\d{2}:\d{2} (AM|PM) IST/);
+    const first = await time.textContent();
+    await expect.poll(async () => time.textContent(), { timeout: 4000 }).not.toBe(first);
+    expect(await clock.locator('[aria-live]').count()).toBe(0);
+  });
+});
