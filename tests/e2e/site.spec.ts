@@ -201,7 +201,9 @@ test.describe('fund research (mocked API, synthetic fixture)', () => {
     await page.getByRole('link', { name: /TEST FIXTURE Synthetic Fund - Direct Plan - Growth/ }).click();
     await expect(page).toHaveURL(new RegExp(`/funds/${FIXTURE_CODE}$`));
     await expect(page.getByRole('heading', { name: 'Data source', exact: true })).toBeVisible();
-    await expect(page.getByText('Synthetic simulation')).toBeVisible();
+    const source = page.getByRole('region', { name: 'Data source' });
+    await expect(source.locator('dt', { hasText: 'Freshness status' }).locator('xpath=following-sibling::dd[1]')).toHaveText('Synthetic simulation');
+    await expect(source.locator('dt', { hasText: 'Last attempted refresh' })).toBeVisible();
     await expect(page.getByText('Expense ratio (TER)')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Rolling returns' })).toBeVisible();
   });
