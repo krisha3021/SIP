@@ -533,3 +533,19 @@ test.describe('Strategy Lab AI explanation', () => {
     expect(posted).toEqual([]);
   });
 });
+
+test.describe('small phones (375px)', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+  for (const path of ['/', '/strategy-lab', '/compare', '/watchlist', '/privacy-permissions', '/calculators/sip']) {
+    test(`${path} has no sideways scrolling and keeps the clock and menu usable`, async ({ page }) => {
+      await page.goto(path);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+      await expect(page.locator('[data-clock]')).toBeVisible();
+      await expect(page.locator('[data-clock]')).toContainText('Current time — IST');
+      const menu = page.getByRole('button', { name: 'Menu', exact: true });
+      await expect(menu).toBeVisible();
+      const box = (await menu.boundingBox())!;
+      expect(box.x + box.width).toBeLessThanOrEqual(375);
+    });
+  }
+});

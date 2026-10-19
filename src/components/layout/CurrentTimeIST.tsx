@@ -46,10 +46,10 @@ export function CurrentTimeIST() {
   const now = seconds === null ? null : new Date(seconds * 1000);
   const f = now ? formatIST(now) : null;
   return (
-    <div data-clock title={TOOLTIP} className="flex min-w-[6.5rem] flex-col items-end leading-tight md:min-w-[17rem] print:hidden">
-      <span className="text-[0.7rem] font-medium uppercase tracking-wide text-muted">Current time — IST</span>
+    <div data-clock title={TOOLTIP} className="flex shrink-0 flex-col items-end leading-tight md:min-w-[17rem] print:hidden">
+      <span className="whitespace-nowrap text-[0.625rem] font-medium uppercase tracking-wide text-muted sm:text-[0.7rem]">Current time — IST</span>
       {f && now ? (
-        <time dateTime={now.toISOString()} className="num text-xs text-text">
+        <time dateTime={now.toISOString()} className="num whitespace-nowrap text-xs text-text">
           <span className="hidden md:inline">{f.date}</span>
           <span className="hidden md:inline" aria-hidden="true">
             {' | '}

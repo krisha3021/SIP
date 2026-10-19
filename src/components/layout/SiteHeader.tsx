@@ -27,7 +27,7 @@ export function SiteHeader() {
 
   return (
     <header data-site-header className="sticky top-0 z-40 border-b border-line bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/85">
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-3 sm:gap-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2 rounded-md text-text no-underline" aria-label="Lakshya home">
           <LogoMark />
           <span className="font-display text-xl font-semibold tracking-tight">Lakshya</span>
@@ -54,19 +54,19 @@ export function SiteHeader() {
           </ul>
         </nav>
 
-        <div className="ml-auto flex items-center gap-2 xl:ml-2">
+        <div className="ml-auto flex items-center gap-1.5 sm:gap-2 xl:ml-2">
           <CurrentTimeIST />
           <ThemeToggle />
           <button
             type="button"
-            className="inline-flex h-10 items-center gap-2 rounded-md border border-line px-3 text-sm font-medium text-text hover:bg-surface-2 xl:hidden"
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-line px-2.5 text-sm font-medium text-text hover:bg-surface-2 sm:px-3 xl:hidden"
             aria-haspopup="dialog"
             aria-expanded={open}
             aria-controls="mobile-nav"
             onClick={openDrawer}
           >
             <Menu aria-hidden="true" size={18} />
-            Menu
+            <span className="sr-only sm:not-sr-only">Menu</span>
           </button>
         </div>
       </div>
