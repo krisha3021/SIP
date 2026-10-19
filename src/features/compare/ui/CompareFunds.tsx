@@ -156,7 +156,7 @@ export function CompareFunds({ initialCodes = [] }: { initialCodes?: number[] })
         ) : null;
       })}
       {ready.length > 0 && (
-        <div className="overflow-x-auto rounded-xl border border-line">
+        <div className="overflow-x-auto rounded-xl border border-line" role="region" aria-label="Fund comparison table (scrolls sideways)" tabIndex={0}>
           <table aria-label="Fund comparison" className="min-w-full text-sm">
             <caption className="sr-only">Fund comparison: one column per fund, the same rows for every fund</caption>
             <thead className="bg-surface-2">

@@ -23,6 +23,7 @@ const CORE_ROUTES = [
   '/watchlist',
   '/historical',
   '/scenario-lab',
+  '/strategy-lab',
   '/saved',
   '/learn',
   '/methodology',
@@ -459,5 +460,22 @@ test.describe('watchlist (local only)', () => {
     await expect(page.getByRole('link', { name: /TEST FIXTURE/ })).toBeVisible();
     await page.getByRole('button', { name: /Remove .* from the watchlist/ }).click();
     await expect(page.getByText(/No schemes on your watchlist yet/)).toBeVisible();
+  });
+});
+
+test.describe('Strategy Lab (local, no network)', () => {
+  test('compares strategies on-device and explains them without any external call', async ({ page }) => {
+    const external: string[] = [];
+    page.on('request', (r) => {
+      const u = new URL(r.url());
+      if (u.hostname !== 'localhost' && u.hostname !== '127.0.0.1') external.push(r.url());
+    });
+    await page.goto('/strategy-lab');
+    await expect(page.getByText('Inputs stay on this device')).toBeVisible();
+    const table = page.getByRole('table', { name: 'Strategy comparison' });
+    await expect(table.getByRole('rowheader', { name: /^Fixed SIP/ })).toBeVisible();
+    await expect(page.getByText('Simulation — not an actual investment').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'What these results mean' })).toBeVisible();
+    expect(external).toEqual([]);
   });
 });

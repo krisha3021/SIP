@@ -181,3 +181,7 @@ export type { CompareRow, ComparabilityWarning, ComparabilityCode, HoldingsDiscl
 export { compareStrategies, blendedAssumptions, strategyInputSchema, DEFAULT_ASSETS, DEFAULT_CORRELATIONS, DEFAULT_MIXES } from '@/lib/finance/strategy';
 export type { StrategyInput, StrategyResult, StrategyOutcome as StrategyLabOutcome, StrategyFact } from '@/lib/finance/strategy';
 export { buildStrategyReport, STRATEGY_NOTICE } from '@/lib/export/reportBuilders';
+export { explainStrategies, formatFact, EXPLANATION_NOTICE } from '@/lib/finance/explain';
+export type { Explanation } from '@/lib/finance/explain';
+export { checkGrounding, extractNumberTokens } from '@/lib/ai/grounding';
+export type { GroundingFact, GroundingResult } from '@/lib/ai/grounding';
