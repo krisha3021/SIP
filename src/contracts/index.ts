@@ -168,3 +168,5 @@ export interface AutomationRunReport {
 export { availableField, unavailableField, assertSamePlan } from '@/lib/data/fields';
 export type { ProvenancedField, FieldStatus, FieldScope, FieldUnit, UsageStatus, ValidationStatus, FieldContext } from '@/lib/data/fields';
 export type { SchemeIdentity } from '@/lib/data/identity';
+export { datasetTimestamps } from '@/lib/data/provenance';
+export type { DatasetTimestamps } from '@/lib/data/provenance';

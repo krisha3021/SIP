@@ -59,6 +59,7 @@ export const NAV_RESPONSE = {
   lastError: null,
   servedFrom: 'upstream',
   droppedRows: 0,
+  timestamps: { dataAsOf: LAST.date, providerPublishedAt: null, lastSuccessfulRetrieval: '2025-01-01T10:00:00Z', lastAttemptedRefresh: '2025-01-01T10:00:00Z', freshness: 'synthetic' },
 };
 
 export const IDCW_NAV_RESPONSE = {

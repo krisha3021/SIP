@@ -1,5 +1,5 @@
 /** Typed client for Lakshya's own /api/funds routes. The browser never calls the provider directly. */
-import type { FreshnessState, NavPoint, Provenance, SchemeNavHistory } from '@/contracts';
+import type { DatasetTimestamps, FreshnessState, NavPoint, Provenance, SchemeNavHistory } from '@/contracts';
 
 export interface SchemeMetaDto {
   schemeCode: number;
@@ -29,6 +29,7 @@ export interface NavResponse {
   lastError: string | null;
   servedFrom: 'upstream' | 'cache' | 'last-known-good';
   droppedRows: number;
+  timestamps: DatasetTimestamps;
 }
 
 export interface SearchResponse {

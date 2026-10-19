@@ -72,7 +72,7 @@ export function FundDetail({ schemeCode }: { schemeCode: string }) {
         <KpiCard label="ISIN (growth)" value={d.meta.isinGrowth ?? 'Not available'} />
         <KpiCard label="Observations" value={formatCount(d.navs.length)} sub={d.provenance.coverage ? `${d.provenance.coverage.from} to ${d.provenance.coverage.to}` : undefined} />
       </KpiGrid>
-      <ProvenancePanel provenance={d.provenance} freshness={d.freshness} servedFrom={d.servedFrom} lastError={d.lastError} droppedRows={d.droppedRows} />
+      <ProvenancePanel provenance={d.provenance} freshness={d.freshness} servedFrom={d.servedFrom} lastError={d.lastError} droppedRows={d.droppedRows} timestamps={d.timestamps} />
       <section aria-labelledby="nav-heading" className="space-y-3">
         <h2 id="nav-heading" className="text-xl font-semibold">
           NAV history

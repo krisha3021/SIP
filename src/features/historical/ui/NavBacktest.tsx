@@ -197,7 +197,7 @@ function BacktestScreen({ data, onChange }: { data: NavResponse; onChange: () =>
           ) : (
             <BacktestResults r={result.value} warnings={result.warnings} />
           )}
-          <ProvenancePanel provenance={data.provenance} freshness={data.freshness} servedFrom={data.servedFrom} lastError={data.lastError} droppedRows={data.droppedRows} />
+          <ProvenancePanel provenance={data.provenance} freshness={data.freshness} servedFrom={data.servedFrom} lastError={data.lastError} droppedRows={data.droppedRows} timestamps={data.timestamps} />
         </section>
       </div>
       <MethodNote>

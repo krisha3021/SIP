@@ -4,6 +4,7 @@ import {
   InMemoryCacheStore,
   RequestDeduper,
   createNavService,
+  datasetTimestamps,
   schemeCodeSchema,
   searchQuerySchema,
   searchSchemes,
@@ -58,6 +59,7 @@ export function navEnvelope(r: Extract<NavOutcome, { ok: true }>['result'], incl
     lastError: r.state.lastError,
     servedFrom: r.source as 'cache' | 'upstream' | 'last-known-good',
     droppedRows: d.droppedRows,
+    timestamps: datasetTimestamps(r.state, r.freshness),
   };
 }
 

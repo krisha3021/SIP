@@ -94,3 +94,27 @@ export function navFreshness(
   if (lag <= graceBusinessDays) return state.lastError ? 'stale' : 'latest-nav';
   return 'stale';
 }
+
+export interface DatasetTimestamps {
+  /** Date the newest observation refers to. */
+  dataAsOf: string | null;
+  /** Publication time stated by the provider; null when the provider does not supply one (MFAPI does not). */
+  providerPublishedAt: string | null;
+  /** Last upstream retrieval that succeeded. Never advanced by a failure. */
+  lastSuccessfulRetrieval: string | null;
+  /** Last upstream attempt, successful or not. */
+  lastAttemptedRefresh: string | null;
+  freshness: FreshnessState;
+}
+
+/** The five timestamps the UI shows separately from the header clock. */
+export function datasetTimestamps(state: DatasetState<unknown>, freshness: FreshnessState): DatasetTimestamps {
+  const p = state.data ? state.provenance : null;
+  return {
+    dataAsOf: p?.observedAt ?? null,
+    providerPublishedAt: null,
+    lastSuccessfulRetrieval: p?.fetchedAt ?? null,
+    lastAttemptedRefresh: state.data ? state.lastAttemptAt : null,
+    freshness: p ? freshness : 'unavailable',
+  };
+}

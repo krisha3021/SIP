@@ -210,7 +210,7 @@ function SlotDetail({ asset, data, range, onClear }: { asset: Asset; data: NavRe
       <details>
         <summary className="cursor-pointer text-sm">Data source for this series</summary>
         <div className="mt-2">
-          <ProvenancePanel provenance={data.provenance} freshness={data.freshness} servedFrom={data.servedFrom} lastError={data.lastError} droppedRows={data.droppedRows} />
+          <ProvenancePanel provenance={data.provenance} freshness={data.freshness} servedFrom={data.servedFrom} lastError={data.lastError} droppedRows={data.droppedRows} timestamps={data.timestamps} />
         </div>
       </details>
     </div>
