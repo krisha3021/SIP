@@ -21,6 +21,7 @@ const CORE_ROUTES = [
   '/funds',
   '/compare',
   '/watchlist',
+  '/privacy-permissions',
   '/historical',
   '/scenario-lab',
   '/strategy-lab',
@@ -477,5 +478,27 @@ test.describe('Strategy Lab (local, no network)', () => {
     await expect(page.getByText('Simulation — not an actual investment').first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'What these results mean' })).toBeVisible();
     expect(external).toEqual([]);
+  });
+});
+
+test.describe('permission dialog (real browser)', () => {
+  test('deleting a saved plan needs explicit approval; Cancel is focused and keeps the plan', async ({ page }) => {
+    await page.goto('/calculators/goal-planner');
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await page.getByLabel('Plan name').fill('Keep me');
+    await page.getByRole('button', { name: 'Save plan' }).click();
+    await page.goto('/saved');
+    await page.getByRole('button', { name: 'Delete Keep me' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Approve this action?' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused();
+    await expect(dialog.getByText('This changes what is saved.')).toBeVisible();
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(page.getByRole('link', { name: 'Keep me' })).toBeVisible();
+    await page.getByRole('button', { name: 'Delete Keep me' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Approve this action' }).click();
+    await expect(page.getByRole('link', { name: 'Keep me' })).toHaveCount(0);
+    await page.goto('/privacy-permissions');
+    await expect(page.getByText(/delete-saved-plan → this browser: approved/)).toBeVisible();
   });
 });
