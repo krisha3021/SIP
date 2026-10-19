@@ -175,3 +175,5 @@ export type { ResearchFieldKey, ProviderStatus, ProviderState } from '@/lib/data
 export type { FundProfile } from '@/lib/data/research/profile';
 export { performanceMetrics } from '@/lib/finance/performance';
 export type { PerformanceResult, PeriodReturn, PeriodKey } from '@/lib/finance/performance';
+export { comparabilityWarnings, holdingsOverlap, MAX_COMPARE } from '@/lib/finance/compareFunds';
+export type { CompareRow, ComparabilityWarning, ComparabilityCode, HoldingsDisclosure, OverlapResult } from '@/lib/finance/compareFunds';

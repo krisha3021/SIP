@@ -19,6 +19,7 @@ const CORE_ROUTES = [
   '/calculators/allocation-explorer',
   '/goals',
   '/funds',
+  '/compare',
   '/historical',
   '/scenario-lab',
   '/saved',
@@ -430,5 +431,19 @@ test.describe('header clock', () => {
     const first = await time.textContent();
     await expect.poll(async () => time.textContent(), { timeout: 4000 }).not.toBe(first);
     expect(await clock.locator('[aria-live]').count()).toBe(0);
+  });
+});
+
+test.describe('compare funds (mocked API, synthetic fixture)', () => {
+  test('two funds on the same rows, with the option-mismatch warning and honest gaps', async ({ page }) => {
+    await mockFundApi(page);
+    await page.goto(`/compare?codes=${FIXTURE_CODE},${IDCW_FIXTURE_CODE}`);
+    const table = page.getByRole('table', { name: 'Fund comparison' });
+    await expect(table).toBeVisible();
+    await expect(table.getByRole('rowheader', { name: 'Total expense ratio' })).toBeVisible();
+    await expect(page.getByText(/Options differ/)).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Portfolio overlap' })).toBeVisible();
+    const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
+    expect(axe.violations).toEqual([]);
   });
 });
