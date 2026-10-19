@@ -29,6 +29,12 @@ All are optional; the calculators work with none. Never commit real values; `.en
 | `UPSTASH_REDIS_REST_URL` / `_TOKEN` | unset for now | unset | unset | Shared cache is a deferred owner decision (may be paid). |
 | `CRON_SECRET` | 32+ random characters | unset (cron does not run on previews) | optional, 32+ chars to test locally | Secret; server-only. Without it, `/api/cron/validate-mf-data` returns 401 — it never runs open. |
 | `MF_VALIDATION_DISABLED` | `false` | `true` | `false` | Kill switch for the scheduled data-quality task (`true` → run reports `skipped-disabled`). |
+| `CONSENT_SIGNING_SECRET` | 32+ random characters | separate 32+ value | optional | Secret; server-only. Signs single-use 5-minute consent tokens. Unset means consent-gated actions (AI explanations) stay off. |
+| `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` | owner's chosen free-tier provider (OpenAI-compatible, https) | unset, or a separate key | unset | Secret key; server-only. All three are required, or AI is off. |
+| `LLM_PROVIDER_NAME`, `LLM_DATA_RETENTION_NOTE`, `LLM_TERMS_URL` | owner-written summary of the provider's terms | same | — | Shown in the consent dialog. Write the retention note only after reading the provider's terms. |
+| `LLM_DAILY_REQUEST_CAP` | e.g. `200` | lower | — | Per instance, per IST day. |
+| `AMFI_REUSE_APPROVED`, `AMFI_TER_DATA_URL`, `AMFI_AAUM_DATA_URL` | `false` until AMFI gives written permission | `false` | `false` | Gate for TER and scheme AUM. URLs must be on the AMFI host allowlist. |
+| `RATINGS_PROVIDER`, `RATINGS_DISPLAY_LICENSED` | unset / `false` until licensed | same | same | Ratings show only with a licence. No rating feed adapter exists yet. |
 
 `VERCEL_ENV` is set by Vercel automatically. When it is not `production`, the root layout emits `noindex, nofollow` and
 `robots.txt` disallows everything, so preview URLs are not indexed.

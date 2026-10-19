@@ -421,3 +421,53 @@ grandfathering illustration (gain ₹1,40,000 → taxable ₹15,000 → ₹1,875
 branches of the grandfathering rule; the 12- and 24-month boundaries, including 29 Feb; s.50AA before and after
 1-4-2023; slab versus s.112; losses; ELSS; total-cost input; the disabled paths and invalid inputs; and sources on
 every rule.
+
+## 19. Historical performance metrics (`performance.ts`; added in 0.5.0)
+- **Point-to-point returns:**
+  - Each window ends at the last NAV on or before the as-of date.
+  - It starts at the last NAV on or before (as-of − period), and only when that NAV is within 7 days of the target
+    start. Otherwise the period shows "Insufficient history".
+  - Periods under one year are absolute returns. Periods of one year or more are annualised as
+    `(end/start)^(365/days) − 1`.
+  - Nothing before the first NAV in the dataset is used.
+- **Volatility:** the sample standard deviation of daily log returns × √252. It needs at least 60 returns.
+- **Max drawdown:** computed on the NAV series itself (no contributions), with peak, trough and recovery dates.
+- **Calendar years:** a year is shown only if there is a NAV within 7 days of both year-ends. Ties for best or worst
+  resolve to the later year.
+- **Costs:** NAVs are after scheme expenses, so the TER is never deducted again. Exit loads and taxes are excluded.
+
+## 20. Strategy Lab (`strategy.ts`; added in 0.5.0)
+- **Engines used:** `projectAccumulation` (effective annual rate, end-of-month contributions), `planGoal`, and seeded
+  `runMonteCarlo`. Every strategy uses the same seed, so outcomes are comparable.
+- **Contribution strategies:** fixed SIP, step-up SIP, 75% and 125% of capacity. They exclude the existing corpus and
+  use the base mix, which is the first mix.
+- **Lump sum + SIP and the allocation mixes:** these invest the existing corpus at the start, plus a fixed SIP.
+- **Mix assumptions:** expected return is Σ wᵢ·Eᵢ. Volatility is √(wᵀΣw), using the user's correlations.
+  - The deterministic projection uses the assumed mean return.
+  - The simulated median is lower when volatility is higher (μ = ln(1+E) − σ²/2; see §Monte Carlo).
+- **Goal:** the goal is inflated to future ₹ unless it was entered in future ₹. "Monthly needed" is solved so the
+  forward engine reaches the target exactly. "Paths reaching goal" is a model frequency, not a probability of the future.
+- **Informational inputs:** risk preference and the liquidity reserve are shown back to the user. They are never
+  used to score or select a strategy.
+- **Not modelled:** illustrative rebalancing (a constant mix already implies maintained weights), STP, and taxes,
+  loads and fees beyond the return assumption.
+
+## 21. Explanations and grounding (`explain.ts`, `ai/grounding.ts`; added in 0.5.0)
+- **Deterministic explanation:** built only from `result.facts` through `formatFact`. Rupees are in lakh/crore;
+  percentages have one decimal.
+- **Grounding check** (applied to both the deterministic and the AI text):
+  - Every ₹ or % token must equal a fact within display rounding. For ₹ that is half the last shown digit plus 0.5%;
+    for % it is half the last shown digit.
+  - Bare integers 0–10 are allowed for counting words.
+  - Every `[citation]` must be a known fact id.
+  - Guarantee, "risk-free", "best fund" and buy/sell wording is rejected.
+- **AI text:** shown only when it passes the check, and always labelled "AI-generated explanation", separate from
+  the calculation.
+
+## 22. Fund comparison (`compareFunds.ts`; added in 0.5.0)
+- **Size:** 2–4 funds, on the same rows.
+- **Warnings** are raised when categories differ, when NAV dates differ by more than 3 days, when plan or option types
+  differ, when return periods are not available for every fund, or when research coverage is incomplete.
+- **Overlap:** Σ min(weight A, weight B) over ISINs held by both. It is unavailable without licensed holdings, or when
+  the two disclosures are more than 31 days apart. It is "partial" when either disclosure covers less than 95% of the
+  portfolio (for example, top-10 holdings only).

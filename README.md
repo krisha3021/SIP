@@ -17,6 +17,14 @@ What is there today:
 Still waiting on the owner: legal and contact content, FY 2026-27 tax verification, MFAPI terms, the approved scheme
 list, the storage service, and `CRON_SECRET`. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
+## Research-platform upgrade (branch `release/research-upgrade`, 2026-10-19; not yet deployed)
+- A header clock: "Current time — IST", from the device clock. Separate from the five dataset timestamps (data as of, provider publication, last successful retrieval, last attempted refresh, freshness).
+- Field-level provenance for every fund field, plus an enriched fund profile: identity, research fields and historical performance metrics. AMFI TER and AUM are built but **stay off until AMFI gives written permission**. Ratings show only with a licence.
+- **Compare Funds** (up to 4, with comparability warnings), a browser-local **Watchlist**, and **Strategy Lab** (deterministic strategy comparison with downside ranges and a grounded explanation).
+- An opt-in **AI explanation** through any OpenAI-compatible free tier. It is off until configured, gated by a server-verified consent token bound to the exact data, and its output is shown only if every number matches the calculation.
+- A **Privacy & Permissions** page and dialog, and a local audit log. Saved-plan deletion needs approval. There is no transaction execution (`/api/transactions` always returns 403).
+- Inventory and gap analysis: [docs/UPGRADE-INVENTORY.md](docs/UPGRADE-INVENTORY.md). Plan: [docs/plans/2026-10-19-research-platform-upgrade.md](docs/plans/2026-10-19-research-platform-upgrade.md).
+
 ## Deploy
 `main` deploys to production through Vercel's GitHub integration; other branches get preview URLs. The steps,
 environment variables, domain setup and rollback are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
@@ -55,5 +63,8 @@ Colour contrast of the design tokens is checked with `node scripts/contrast.mjs`
 - [docs/CONTRACTS.md](docs/CONTRACTS.md): the website ⇄ finance contract and open items.
 - [CLAUDE.md](CLAUDE.md): ownership map and safety rules.
 - [docs/ROADMAP.md](docs/ROADMAP.md): phases and deferred work.
+- [docs/DATA-DICTIONARY.md](docs/DATA-DICTIONARY.md): the field-level provenance model and every research field's source and status.
+- [docs/PERMISSIONS.md](docs/PERMISSIONS.md): permission categories, the consent dialog, server enforcement and its limits.
+- [docs/UPGRADE-INVENTORY.md](docs/UPGRADE-INVENTORY.md): verified feature inventory, gaps, and the provider and licensing table.
 
 Not investment advice. Lakshya is not a SEBI-registered investment adviser or research analyst.
