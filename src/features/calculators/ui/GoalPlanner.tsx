@@ -13,7 +13,7 @@ import { CalculatorLayout, CalcErrorState, ConventionsLine, MethodNote, Warnings
 import { CONVENTION_LABEL, RateConventionField, TIMING_LABEL, TimingField } from '@/components/calculator/ConventionFields';
 import { ExportButtons, SavePlanButton, ShareButton } from '@/components/calculator/ActionButtons';
 import { formatINR } from '@/lib/format/inr';
-import { buildQuery, optionFromParams, useFields, type SearchParamsRecord } from './useFields';
+import { buildQuery, dropParams, optionFromParams, useFields, type SearchParamsRecord } from './useFields';
 import { monthLabel, shortMonthLabel } from './format';
 
 const DEFAULTS = { g: 5000000, y: 15, r: 11, i: 6, c: 200000, cur: 10000, s: 0 } as const satisfies Record<string, number>;
@@ -180,7 +180,7 @@ export function GoalPlanner({ params }: { params?: SearchParamsRecord }) {
         }}
         actions={
           <>
-            <ShareButton path="/calculators/goal-planner" query={query} />
+            <ShareButton path="/calculators/goal-planner" query={dropParams(query, ['c'])} />
             <SavePlanButton calculator="Goal planner" path="/calculators/goal-planner" query={query} defaultName="Goal plan" />
             <ExportButtons
               fileBase="goal-planner"
@@ -193,6 +193,7 @@ export function GoalPlanner({ params }: { params?: SearchParamsRecord }) {
           </>
         }
       />
+      <p className="text-sm text-muted">Share links leave out the amount you already hold; saved plans (kept only in this browser) include it.</p>
       <MethodNote>
         <ul>
           <li>The goal is inflated to the horizon when entered in today&apos;s rupees. Existing savings grow at the assumed return.</li>

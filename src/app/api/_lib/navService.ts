@@ -11,6 +11,7 @@ import {
   type NavServiceResult,
 } from '@/contracts/server';
 import { fetchTimeoutMs } from './server';
+import { getStorage } from './storage';
 
 /**
  * Route-side wiring of Agent 2's NAV service (cache → de-duplication → last-known-good).
@@ -18,7 +19,8 @@ import { fetchTimeoutMs } from './server';
  * until a shared store is provisioned (owner decision).
  */
 const navService = createNavService({
-  cache: new InMemoryCacheStore({ maxEntries: 200 }),
+  // Upstash Redis behind an in-memory tier when configured; in-memory only otherwise.
+  cache: getStorage().cacheStore,
   fetchOptions: { timeoutMs: fetchTimeoutMs(), retries: 1 },
 });
 

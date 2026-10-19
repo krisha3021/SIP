@@ -23,7 +23,7 @@ All are optional; the calculators work with none. Never commit real values; `.en
 
 | Variable | Production | Preview | Development (`.env.local`) | Notes |
 |---|---|---|---|---|
-| `NEXT_PUBLIC_SITE_URL` | `https://<your-domain>` | leave unset | `http://localhost:3000` | Canonical URLs, sitemap. Public. |
+| `NEXT_PUBLIC_SITE_URL` | `https://<your-domain>` (optional) | leave unset | `http://localhost:3000` | Canonical URLs, sitemap, robots. Public. When it is unset, the site uses `https://$VERCEL_PROJECT_PRODUCTION_URL`, which Vercel sets automatically (see `src/app/site-url.ts`). |
 | `NAV_PROVIDER` | `mfapi` | `mfapi` or `none` | `mfapi` | `none` turns fund features off (routes return 503). |
 | `NAV_FETCH_TIMEOUT_MS` | `8000` | `8000` | `8000` | Clamped server-side to 2000–15000. |
 | `UPSTASH_REDIS_REST_URL` / `_TOKEN` | unset for now | unset | unset | Shared cache is a deferred owner decision (may be paid). |
@@ -46,6 +46,9 @@ All are optional; the calculators work with none. Never commit real values; `.en
 1. Vercel → Project → Settings → Domains → add `example.in` and `www.example.in` (choose one as primary; redirect the other).
 2. At the registrar, create the records Vercel shows (typically an `A` record for the apex and a `CNAME` for `www`).
 3. Wait for Vercel to verify and issue TLS certificates. Then set `NEXT_PUBLIC_SITE_URL` for Production and redeploy.
+   Until you do, canonical URLs and the sitemap use `VERCEL_PROJECT_PRODUCTION_URL`. That is the project's shortest
+   production domain, which Vercel sets automatically, so the current production URL (https://sip-three-zeta.vercel.app)
+   is used without any configuration.
 
 ## 5. Verify a deployment
 Run on the Preview URL before merging, and on Production after:

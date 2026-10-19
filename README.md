@@ -2,8 +2,24 @@
 
 Educational Indian investment-planning and mutual-fund research website. Created by Alok Shukla.
 
-> Status: **Phase 2 (website) in progress on `agent-1/web-platform`**. Calculators, fund research, historical NAV
-> backtests, scenario lab and local saved plans are built on the tested Phase 1 engines. Not yet deployed.
+## Status
+**Live:** https://sip-three-zeta.vercel.app (Vercel production, deployed from `main`). Checked 2026-10-17: home page
+returns 200, `/api/health` reports `ok`, and `/api/market-status` reports no quote provider.
+
+What is there today:
+- 12 calculators, all without sign-in: SIP, step-up SIP, lumpsum, existing corpus + SIP, goal planner, SWP, Monte Carlo,
+  income tax (FY 2025-26 only), Life-stage & Risk Planner, retirement planner, household cash flow, Allocation Explorer.
+- Fund research and historical NAV backtests on MFAPI.in data, with provenance and freshness. Scenario Lab, local saved
+  plans, Learn, Methodology and Data Sources.
+- A daily data-quality cron (`/api/cron/validate-mf-data`). It refuses every request until `CRON_SECRET` is set in
+  Vercel. Its runs are not persisted until a storage service is chosen.
+
+Still waiting on the owner: legal and contact content, FY 2026-27 tax verification, MFAPI terms, the approved scheme
+list, the storage service, and `CRON_SECRET`. See [docs/ROADMAP.md](docs/ROADMAP.md).
+
+## Deploy
+`main` deploys to production through Vercel's GitHub integration; other branches get preview URLs. The steps,
+environment variables, domain setup and rollback are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Quick start
 ```bash

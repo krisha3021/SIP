@@ -14,7 +14,7 @@ import { CalculatorLayout, CalcErrorState, ConventionsLine, MethodNote, Warnings
 import { CONVENTION_LABEL, RateConventionField, TIMING_LABEL, TimingField } from '@/components/calculator/ConventionFields';
 import { ExportButtons, SavePlanButton, ShareButton } from '@/components/calculator/ActionButtons';
 import { formatINR, formatPct } from '@/lib/format/inr';
-import { buildQuery, optionFromParams, useFields, type SearchParamsRecord } from './useFields';
+import { buildQuery, dropParams, optionFromParams, useFields, type SearchParamsRecord } from './useFields';
 import { monthLabel, shortMonthLabel } from './format';
 
 export type AccumulationVariant = 'sip' | 'step-up-sip' | 'lumpsum' | 'corpus-sip';
@@ -134,6 +134,8 @@ export function AccumulationCalculator({ variant, params }: { variant: Accumulat
     ...(variant === 'corpus-sip' && pauses.length ? { p: pauses.map((p) => `${p.from}-${p.to}`).join(',') } : {}),
     ...(variant === 'corpus-sip' && topUps.length ? { tu: topUps.map((t) => `${t.month}:${t.amount}`).join(',') } : {}),
   });
+  // Holdings (the existing corpus) stay out of public share links; local saves keep them.
+  const shareQuery = variant === 'corpus-sip' ? dropParams(query, ['c']) : query;
   const path = `/calculators/${variant}`;
 
   const conventions: string[] = [
@@ -344,7 +346,7 @@ export function AccumulationCalculator({ variant, params }: { variant: Accumulat
         onReset={reset}
         actions={
           <>
-            <ShareButton path={path} query={query} />
+            <ShareButton path={path} query={shareQuery} />
             <SavePlanButton calculator={TITLES[variant]} path={path} query={query} defaultName={TITLES[variant]} />
             <ExportButtons
               fileBase={variant}
@@ -357,6 +359,7 @@ export function AccumulationCalculator({ variant, params }: { variant: Accumulat
           </>
         }
       />
+      {variant === 'corpus-sip' && <p className="text-sm text-muted">Share links leave out the amount you already hold; saved plans (kept only in this browser) include it.</p>}
       <MethodNote>
         <ul>
           <li>Each month the balance grows at the monthly rate. With end-of-month timing the contribution is added after growth; with start-of-month timing it is added before growth.</li>
