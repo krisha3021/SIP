@@ -10,6 +10,7 @@
  */
 import type { CellValue } from './sanitize';
 import type { Report, ReportTable } from './report';
+import type { StrategyResult } from '../finance/strategy';
 import { accumulationInputSchema, type AccumulationInput, type AccumulationResult } from '../finance/sip';
 import { goalInputSchema, type GoalInput, type GoalResult } from '../finance/goal';
 import { swpInputSchema, type SwpInput, type SwpResult } from '../finance/swp';
@@ -713,6 +714,81 @@ export function buildCapitalGainsReport(input: CapitalGainsInput, result: Capita
         name: 'Tax by component',
         columns: [{ header: 'Component' }, { header: 'Net gain (₹)', numFmt: '#,##0.00' }, { header: 'Taxable (₹)', numFmt: '#,##0.00' }, { header: 'Rate (%)' }, { header: 'Tax (₹)', numFmt: '#,##0.00' }],
         rows: result.byTreatment.map((b) => [b.label, b.netGain, b.taxableGain, pct(b.rate), b.tax]),
+      },
+    ],
+  };
+}
+
+
+// ── Strategy Lab ─────────────────────────────────────────────────────────────
+
+export const STRATEGY_NOTICE =
+  'Educational simulation only — not an actual investment, not a recommendation of any strategy, scheme or allocation, and not a suitability assessment. Lakshya is not registered with SEBI as an investment adviser. Every figure follows from the assumptions shown; none is a forecast or a guarantee.';
+
+export function buildStrategyReport(result: StrategyResult, ctx: ReportContext): Report {
+  const a = result.assumptions;
+  return {
+    ...base('Strategy Lab comparison', ctx, `${PROJECTION_LABEL} and synthetic simulation. ${STRATEGY_NOTICE} Projections use projectAccumulation at each strategy's assumed return; downside figures use the seeded Monte Carlo engine with the same seed for every strategy.`),
+    assumptions: [
+      ['Horizon (years)', a.years],
+      ['Monthly capacity (₹)', a.monthlyCapacity],
+      ['Existing goal corpus (₹)', a.existingCorpus],
+      ['Annual step-up (%)', a.stepUpPct],
+      ['Inflation (%)', a.inflationPct],
+      ['Goal (₹)', a.targetAmount ?? 'No goal entered'],
+      ['Goal stated in', a.targetIsInTodaysRupees ? "Today's rupees" : 'Future rupees'],
+      ['Equity: assumed return / volatility (%)', `${a.assets.equity.expectedReturnPct} / ${a.assets.equity.volatilityPct}`],
+      ['Debt: assumed return / volatility (%)', `${a.assets.debt.expectedReturnPct} / ${a.assets.debt.volatilityPct}`],
+      ['Gold: assumed return / volatility (%)', `${a.assets.gold.expectedReturnPct} / ${a.assets.gold.volatilityPct}`],
+      ['Correlations (equity–debt, equity–gold, debt–gold)', `${a.correlations.equityDebt}, ${a.correlations.equityGold}, ${a.correlations.debtGold}`],
+      ['Liquidity reserve (months, informational)', a.liquidityReserveMonths],
+      ['Risk preference (informational, not used to score)', a.riskPreference],
+    ],
+    conventions: [
+      ['Return convention', 'Effective annual rate, converted to monthly as (1 + r)^(1/12) − 1'],
+      ['Contribution timing', TIMING_TEXT.end],
+      ['Simulation', `${a.simulations} seeded paths per strategy (seed ${a.seed}); monthly lognormal returns`],
+    ],
+    summary: [
+      ...(result.goal ? ([['Goal in future rupees (₹)', result.goal.futureTarget]] as Array<[string, CellValue]>) : []),
+      ...result.notModelled.map((n): [string, CellValue] => [`Not modelled: ${n.label}`, n.reason]),
+      ...result.limitations.map((l, i): [string, CellValue] => [`Limitation ${i + 1}`, l]),
+    ],
+    tables: [
+      {
+        name: 'Strategies',
+        columns: [
+          { header: 'Strategy' },
+          { header: 'Starting monthly (₹)', numFmt: MONEY },
+          { header: 'Initial corpus (₹)', numFmt: MONEY },
+          { header: 'Assumed return (%)', numFmt: PCT },
+          { header: 'Assumed volatility (%)', numFmt: PCT },
+          { header: 'Total contributions (₹)', numFmt: MONEY },
+          { header: 'Projected corpus (₹)', numFmt: MONEY },
+          { header: "Projected corpus, today's ₹", numFmt: MONEY },
+          { header: 'Simulated P10 (₹)', numFmt: MONEY },
+          { header: 'Simulated median (₹)', numFmt: MONEY },
+          { header: 'Simulated P90 (₹)', numFmt: MONEY },
+          { header: 'Paths reaching goal (%)', numFmt: PCT },
+          { header: 'Monthly needed for goal (₹)', numFmt: MONEY },
+          { header: 'Above stated capacity' },
+        ],
+        rows: result.strategies.map((s) => [
+          s.label,
+          s.startingMonthly,
+          s.initialCorpus,
+          s.assumedReturnPct,
+          s.assumedVolatilityPct,
+          s.totalContributions,
+          s.corpusNominal,
+          s.corpusToday,
+          s.monteCarlo.p10,
+          s.monteCarlo.p50,
+          s.monteCarlo.p90,
+          s.monteCarlo.goalSuccessRate === null ? 'No goal' : s.monteCarlo.goalSuccessRate * 100,
+          s.goal ? s.goal.requiredMonthly : 'No goal',
+          s.exceedsCapacity ? 'Yes' : 'No',
+        ]),
       },
     ],
   };

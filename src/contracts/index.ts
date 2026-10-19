@@ -177,3 +177,7 @@ export { performanceMetrics } from '@/lib/finance/performance';
 export type { PerformanceResult, PeriodReturn, PeriodKey } from '@/lib/finance/performance';
 export { comparabilityWarnings, holdingsOverlap, MAX_COMPARE } from '@/lib/finance/compareFunds';
 export type { CompareRow, ComparabilityWarning, ComparabilityCode, HoldingsDisclosure, OverlapResult } from '@/lib/finance/compareFunds';
+// ── 0.5.0: Strategy Lab ──
+export { compareStrategies, blendedAssumptions, strategyInputSchema, DEFAULT_ASSETS, DEFAULT_CORRELATIONS, DEFAULT_MIXES } from '@/lib/finance/strategy';
+export type { StrategyInput, StrategyResult, StrategyOutcome as StrategyLabOutcome, StrategyFact } from '@/lib/finance/strategy';
+export { buildStrategyReport, STRATEGY_NOTICE } from '@/lib/export/reportBuilders';

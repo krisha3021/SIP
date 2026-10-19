@@ -43,6 +43,7 @@ real value: render the fields the engine returns.
 - Research data: `RESEARCH_FIELD_KEYS`, `ResearchFieldKey`, `ProviderStatus` and `FundProfile` in `@/contracts`; `buildFundProfile` and the AMFI TER/AAUM adapter (gated off by `AMFI_REUSE_APPROVED` and owner-confirmed `AMFI_*_DATA_URL`s) in `@/contracts/server`. New route: `GET /api/funds/[code]/profile`.
 - `performanceMetrics(navs, asOf?)` in `@/contracts`: point-to-point returns (absolute under 1 year, ACT/365 CAGR from 1 year), volatility of daily log returns × √252 (≥ 60 returns), NAV max drawdown with dates, and complete calendar years.
 - `comparabilityWarnings(rows)` (2–4 funds: category, NAV date, plan, option, return periods, coverage) and `holdingsOverlap(a, b)` (Σ min weight over common ISINs; unavailable without data or with disclosures more than 31 days apart; partial below 95% coverage), plus `MAX_COMPARE`. New page: `/compare`.
+- Strategy Lab: `compareStrategies`, `blendedAssumptions` (Σ wᵢEᵢ; √(wᵀΣw)), the defaults (assumptions, editable), `StrategyResult` and its `facts` (the only numbers explanations may use), and `buildStrategyReport` with `STRATEGY_NOTICE`. The outcome type is exported as `StrategyLabOutcome` to avoid clashing with the booster's `StrategyOutcome`.
 - `assertSamePlan` checks plan and option only for plan-scoped fields. Scheme-wide fields (`scheme`, `scheme-aaum`, `portfolio-disclosure`) may carry `Unknown` plan/option.
 
 ### 0.4.0 — 2026-10-17 (Agent 2, additive; branch `agent-2/capital-gains`)
