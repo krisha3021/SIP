@@ -25,9 +25,10 @@ export const PRIMARY_NAV: NavItem[] = [
   {
     href: '/funds',
     label: 'Fund Research',
-    description: 'Search schemes, read NAV history and provenanced research fields',
+    description: 'Search schemes and fund houses, read NAV history and provenanced research fields',
     children: [
       { href: '/funds', label: 'Search schemes' },
+      { href: '/amcs', label: 'Fund Houses (AMCs)' },
       { href: '/historical', label: 'Historical Analysis (SIP backtest)' },
     ],
   },

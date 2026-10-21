@@ -41,6 +41,16 @@ describe('consent tokens', () => {
     expect(await verify(token, {}, store)).toEqual({ ok: false, code: 'REPLAYED' });
   });
 
+  it('keeps a used nonce for its whole validity on the verifier clock, whatever the wall clock says', async () => {
+    // Regression: pruning once used Date.now(), so a token verified under an injected clock in the past was pruned
+    // immediately and could be replayed.
+    const store = new InMemoryNonceStore();
+    const e = T0.getTime() + 300_000;
+    expect(await store.consume('n1', e, T0.getTime())).toBe(true);
+    expect(await store.consume('n1', e, e)).toBe(false);
+    expect(await store.consume('n1', e, e + 300_001)).toBe(true); // pruned only after expiry + TTL
+  });
+
   it('rejects when the payload changed after approval', async () => {
     const { token } = issue();
     expect(await verify(token, { payload: { ...payload, scenario: 'changed' } })).toEqual({ ok: false, code: 'PAYLOAD_CHANGED' });

@@ -138,6 +138,12 @@ a {
 [id] {
   scroll-margin-top: 5.5rem;
 }
+/* From xl the header has a second row (primary nav). */
+@media (min-width: 80rem) {
+  [id] {
+    scroll-margin-top: 8.25rem;
+  }
+}
 
 /* Plain links inside text are underlined so they are not distinguished by colour alone. */
 a:where(:not([class])) {

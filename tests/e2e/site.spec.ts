@@ -19,6 +19,7 @@ const CORE_ROUTES = [
   '/calculators/allocation-explorer',
   '/goals',
   '/funds',
+  '/amcs',
   '/compare',
   '/watchlist',
   '/privacy-permissions',
@@ -548,4 +549,32 @@ test.describe('small phones (375px)', () => {
       expect(box.x + box.width).toBeLessThanOrEqual(375);
     });
   }
+});
+
+test.describe('fund houses (AMCs)', () => {
+  test('directory filters, and a profile shows SEBI facts, gated fields and schemes without axe violations', async ({ page }) => {
+    await mockFundApi(page);
+    await page.goto('/amcs');
+    await page.getByLabel('Filter fund houses').fill('MF/044/00/6');
+    await expect(page.getByRole('status').filter({ hasText: 'Showing 1 of' })).toBeVisible();
+    await page.getByRole('link', { name: 'HDFC Mutual Fund', exact: true }).click();
+    await expect(page).toHaveURL(/\/amcs\/hdfc-mutual-fund$/);
+    await expect(page.getByRole('heading', { level: 1, name: 'HDFC Mutual Fund' })).toBeVisible();
+    await expect(page.getByText('MF/044/00/6').first()).toBeVisible();
+    await expect(page.getByText('Not available: awaiting data permission')).toHaveCount(3);
+    await expect(page.getByRole('link', { name: /Direct|fixture/i }).first()).toBeVisible();
+    const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
+    expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  });
+
+  test('the Lakshya Mutual Fund profile says this site is not affiliated', async ({ page }) => {
+    await mockFundApi(page);
+    await page.goto('/amcs/lakshya-mutual-fund');
+    await expect(page.getByText('It is not affiliated with Lakshya Mutual Fund.', { exact: false })).toBeVisible();
+  });
+
+  test('unknown AMC slug is a 404', async ({ page }) => {
+    const res = await page.goto('/amcs/not-a-real-amc');
+    expect(res?.status()).toBe(404);
+  });
 });

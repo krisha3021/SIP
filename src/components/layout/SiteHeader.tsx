@@ -33,28 +33,7 @@ export function SiteHeader() {
           <span className="font-display text-xl font-semibold tracking-tight">Lakshya</span>
         </Link>
 
-        <nav aria-label="Primary" className="ml-auto hidden xl:block">
-          <ul className="flex items-center gap-1">
-            {PRIMARY_NAV.map((item) => {
-              const active = isActive(pathname, item.href);
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    aria-current={active ? 'page' : undefined}
-                    className={`rounded-md px-2.5 py-2 text-sm font-medium no-underline transition-colors ${
-                      active ? 'bg-brand-soft text-brand-strong' : 'text-text hover:bg-surface-2'
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-
-        <div className="ml-auto flex items-center gap-1.5 sm:gap-2 xl:ml-2">
+        <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
           <CurrentTimeIST />
           <ThemeToggle />
           <button
@@ -70,6 +49,27 @@ export function SiteHeader() {
           </button>
         </div>
       </div>
+
+      <nav aria-label="Primary" className="hidden border-t border-line xl:block">
+        <ul className="mx-auto flex h-11 max-w-7xl items-center gap-1 px-4">
+          {PRIMARY_NAV.map((item) => {
+            const active = isActive(pathname, item.href);
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  aria-current={active ? 'page' : undefined}
+                  className={`rounded-md px-2.5 py-1.5 text-sm font-medium whitespace-nowrap no-underline transition-colors ${
+                    active ? 'bg-brand-soft text-brand-strong' : 'text-text hover:bg-surface-2'
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
 
       <dialog
         id="mobile-nav"

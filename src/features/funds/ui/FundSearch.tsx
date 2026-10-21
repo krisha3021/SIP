@@ -16,9 +16,20 @@ type State =
  * Scheme search over /api/funds/search. `hrefFor` decides where a result links (detail page or backtest).
  * `onPick` (optional) turns results into buttons instead of links.
  */
-export function FundSearch({ hrefFor, onPick, label = 'Search mutual fund schemes' }: { hrefFor?: (code: number) => string; onPick?: (r: SearchResultDto) => void; label?: string }) {
+export function FundSearch({
+  hrefFor,
+  onPick,
+  label = 'Search mutual fund schemes',
+  initialQuery,
+}: {
+  hrefFor?: (code: number) => string;
+  onPick?: (r: SearchResultDto) => void;
+  label?: string;
+  /** Runs this search once on mount (e.g. an AMC page listing its schemes). */
+  initialQuery?: string;
+}) {
   const id = useId();
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(initialQuery ?? '');
   const [state, setState] = useState<State>({ status: 'idle' });
   const ctrl = useRef<AbortController | null>(null);
 
@@ -42,6 +53,15 @@ export function FundSearch({ hrefFor, onPick, label = 'Search mutual fund scheme
       /* aborted by a newer search */
     }
   };
+
+  useEffect(() => {
+    if (!initialQuery) return;
+    // Deferred so the search starts after mount; cleared if the component unmounts first (e.g. StrictMode remount).
+    const t = setTimeout(() => void run(initialQuery), 0);
+    return () => clearTimeout(t);
+    // Run once for the initial query only; later searches come from the form.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="space-y-4">

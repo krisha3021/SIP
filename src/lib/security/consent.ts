@@ -29,15 +29,18 @@ const b64 = (s: string | Buffer) => Buffer.from(s).toString('base64url');
 const sign = (secret: string, body: string) => createHmac('sha256', secret).update(body).digest('base64url');
 
 export interface NonceStore {
-  /** Returns true the first time a nonce is consumed, false on any reuse. */
-  consume(nonce: string, expiresAtMs: number): Promise<boolean>;
+  /**
+   * Returns true the first time a nonce is consumed, false on any reuse.
+   * `nowMs` is the verifier's clock, so pruning and expiry use the same time source.
+   */
+  consume(nonce: string, expiresAtMs: number, nowMs: number): Promise<boolean>;
 }
 
 export class InMemoryNonceStore implements NonceStore {
   private used = new Map<string, number>();
-  async consume(nonce: string, expiresAtMs: number): Promise<boolean> {
-    const now = Date.now();
-    for (const [n, exp] of this.used) if (exp < now - CONSENT_TTL_MS) this.used.delete(n);
+  async consume(nonce: string, expiresAtMs: number, nowMs: number): Promise<boolean> {
+    // Prune only entries that expired more than a TTL ago on the verifier's clock (they can no longer pass the expiry check).
+    for (const [n, exp] of this.used) if (exp < nowMs - CONSENT_TTL_MS) this.used.delete(n);
     if (this.used.has(nonce)) return false;
     this.used.set(nonce, expiresAtMs);
     return true;
@@ -77,6 +80,6 @@ export async function verifyConsentToken(
   if (claims.v !== ctx.disclosureVersion) return { ok: false, code: 'DISCLOSURE_CHANGED' };
   if (claims.h !== payloadHash(ctx.payload)) return { ok: false, code: 'PAYLOAD_CHANGED' };
   if (ctx.now.getTime() > claims.e) return { ok: false, code: 'EXPIRED' };
-  if (!(await ctx.nonceStore.consume(claims.n, claims.e))) return { ok: false, code: 'REPLAYED' };
+  if (!(await ctx.nonceStore.consume(claims.n, claims.e, ctx.now.getTime()))) return { ok: false, code: 'REPLAYED' };
   return { ok: true };
 }

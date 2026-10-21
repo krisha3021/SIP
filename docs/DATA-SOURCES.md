@@ -60,6 +60,28 @@ Owner decision needed.
   redistributing them needs a licence (AUDIT §3.3).
 - Index levels and quotes: there is no licensed provider. The prototype's ticker held hard-coded values (AUDIT §3.1).
 
+## SEBI register of mutual funds — the AMC directory (`/amcs`)
+
+- **Source:** SEBI, Recognised Intermediaries → Mutual Funds
+  (https://www.sebi.gov.in/sebiweb/other/OtherAction.do?doRecognisedFpi=yes&intmId=23). This is a public register
+  kept by the regulator.
+- **Snapshot:** all 61 entries were read on 2026-10-21 and stored in `src/lib/data/amc/registry.ts`. Each entry has its
+  name, registration number, registration date and registered address. Addresses were tidied only by removing empty
+  comma fields. SEBI's server blocks scripted requests, so the register is refreshed by hand. Re-read it and update
+  `SEBI_REGISTER_RETRIEVED_ON` when it changes.
+- **Websites:** a URL is recorded only if it was opened over HTTPS on 2026-10-21 and the page identified itself as that
+  fund house (44 of 61). Unverified sites stay `null` and show "Not recorded". `heliosmf.com` was a parked domain, so it
+  is not used.
+- **Schemes on an AMC page:** these are a live MFAPI name search for `searchTerm`, capped at 50 results. It is a
+  convenience query, not an authoritative scheme list.
+- **AUM, holdings, ratings:** not shown.
+  - AMC-wise AUM comes from AMFI, whose terms (above) need written permission.
+  - Portfolio disclosures fall under each AMC's own website terms.
+  - Star ratings need a vendor licence.
+  - Each AMC page explains this and links to the AMC's own site, where it publishes these disclosures.
+- **Name overlap:** SEBI registered "LAKSHYA MUTUAL FUND" (MF/091/26/17) on 2026-03-25. Its page carries a
+  "not affiliated" notice. The owner should review the brand name.
+
 ## Approved scheme list (daily task)
 `src/lib/automation/tasks/approved-schemes.json` lists the schemes the daily task validates. Each entry gives the
 scheme code, a required name substring, the fund house, and the expected plan and option, plus an optional per-scheme
